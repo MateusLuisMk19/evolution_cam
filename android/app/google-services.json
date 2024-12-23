@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1061534590008",
+    "project_id": "evolution-cam",
+    "storage_bucket": "evolution-cam.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1061534590008:android:9c61ce978bf7e437ba72cd",
+        "android_client_info": {
+          "package_name": "com.example.evolution_cam"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyChtjmW6P03rUHlAXEhSpXfUi9FPMxLsw0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
