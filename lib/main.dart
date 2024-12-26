@@ -1,6 +1,12 @@
+import 'package:evolution_cam/configs/app_controller.dart';
+import 'package:evolution_cam/auth/register_screen.dart';
+import 'package:evolution_cam/configs/theme.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'login_screen.dart';
+import 'auth/login_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'pages/home_screen.dart';
+import 'pages/create_reg_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -8,14 +14,39 @@ void main() async {
   runApp(MyApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key); // Corrigido o construtor
+class MyApp extends StatefulWidget {
+  const MyApp({Key? key}) : super(key: key);
+
+  @override
+  _MainApp createState() => _MainApp();
+}
+
+class _MainApp extends State<MyApp> {
+  final _auth = FirebaseAuth.instance;
+
+  Widget _choosePage() {
+    if (_auth.currentUser != null) {
+      return HomeScreen();
+    }
+    return LoginScreen();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: LoginScreen(),
-    );
+    return AnimatedBuilder(
+        animation: AppController.instance,
+        builder: (context, child) {
+          return MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: AppController.instance.isDarkTheme ? darkTheme : lightTheme,
+            initialRoute: '/',
+            routes: {
+              '/login': (context) => LoginScreen(),
+              '/register': (context) => RegisterScreen(),
+              '/': (context) => _choosePage(),
+              '/create': (context) => CreateRegScreen()
+            },
+          );
+        });
   }
 }
