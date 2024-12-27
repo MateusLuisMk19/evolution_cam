@@ -1,6 +1,7 @@
 import 'package:evolution_cam/configs/app_controller.dart';
 import 'package:evolution_cam/auth/register_screen.dart';
 import 'package:evolution_cam/configs/theme.dart';
+import 'package:evolution_cam/pages/profile_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'auth/login_screen.dart';
@@ -44,7 +45,8 @@ class _MainApp extends State<MyApp> {
               '/login': (context) => LoginScreen(),
               '/register': (context) => RegisterScreen(),
               '/': (context) => _choosePage(),
-              '/create': (context) => CreateRegScreen()
+              '/create': (context) => CreateRegScreen(),
+              '/profile': (context) => ProfileScreen(),
             },
           );
         });

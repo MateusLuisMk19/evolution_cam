@@ -78,100 +78,85 @@ Widget CustomTextField(
   );
 }
 
-class CustomSelectField extends StatefulWidget {
-  final List<String> options;
-  final String hint;
-  final Function(String?)? onChanged;
-  final double radius;
-  final bool invisible;
-  final double? marginTop;
-  final double? marginBottom;
-  final double maxHeight;
-
-  const CustomSelectField({
-    Key? key,
-    required this.options,
-    this.hint = 'Selecione uma opção',
-    this.onChanged,
-    this.radius = 5,
-    this.invisible = false,
-    this.marginTop,
-    this.marginBottom,
-    this.maxHeight = 200.0,
-  }) : super(key: key);
-
-  @override
-  _CustomSelectFieldState createState() => _CustomSelectFieldState();
+Widget ActionsGroup(
+    {bool inviseble = false,
+    required Function() fistBtnPressed,
+    required Function() secondBtnPressed}) {
+  if (inviseble) {
+    return SizedBox();
+  }
+  return Row(
+    children: [
+      SizedBox(
+        width: 30,
+        height: 30,
+        child: IconButton.filledTonal(
+          onPressed: fistBtnPressed,
+          icon: Icon(Icons.edit),
+          color: Colors.blue,
+          iconSize: 15,
+        ),
+      ),
+      SizedBox(width: 10),
+      SizedBox(
+        width: 30,
+        height: 30,
+        child: IconButton.filledTonal(
+          onPressed: secondBtnPressed,
+          icon: Icon(Icons.delete),
+          color: Colors.red,
+          iconSize: 15,
+        ),
+      ),
+    ],
+  );
 }
 
-class _CustomSelectFieldState extends State<CustomSelectField> {
-  String? selectedValue;
-
-  @override
-  Widget build(BuildContext context) {
-    if (widget.invisible) {
-      return SizedBox();
-    }
-
-    return Column(
-      children: [
-        SizedBox(
-          height: widget.marginTop,
-        ),
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: const Color.fromARGB(255, 136, 136, 136),
-              width: 0.2,
-            ),
-            borderRadius: BorderRadius.circular(widget.radius),
-            color: Theme.of(context).cardColor, // Altera conforme o tema
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton2<String>(
-                isExpanded: true,
-                hint: Text(
-                  widget.hint,
-                  style: TextStyle(color: Theme.of(context).hintColor),
-                ),
-                value: selectedValue,
-                items: widget.options
-                    .map((option) => DropdownMenuItem<String>(
-                          value: option,
-                          child: Text(option),
-                        ))
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    selectedValue = value;
-                  });
-                  if (widget.onChanged != null) {
-                    widget.onChanged!(value);
-                  }
-                },
-                buttonStyleData: ButtonStyleData(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(widget.radius),
-                    border: Border.all(
-                      color: const Color.fromARGB(255, 136, 136, 136),
-                      width: 1.8,
-                    ),
-                    color: Theme.of(context).cardColor,
-                  ),
-                ),
-                dropdownStyleData: DropdownStyleData(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(widget.radius),
-                    color: Theme.of(context).cardColor,
-                  ),
-                  maxHeight: widget.maxHeight, // Define altura máxima do menu
-                )),
-          ),
-        ),
-        SizedBox(
-          height: widget.marginBottom,
-        ),
-      ],
-    );
+Widget VisibilityBox(
+    {bool inviseble = false,
+    required Widget child,
+    double? marginTop,
+    double? marginBottom}) {
+  if (inviseble) {
+    return SizedBox();
   }
+  return Column(
+    children: [
+      SizedBox(height: marginTop),
+      child,
+      SizedBox(height: marginBottom)
+    ],
+  );
+}
+
+Widget ButtonGroupYN(
+    {required context,
+    label1,
+    label2,
+    Function()? onButton1,
+    Function()? onButton2,
+    numWidth1 = 3.5,
+    numWidth2 = 4.2,
+    MainAxisAlignment axisAlignment = MainAxisAlignment.spaceEvenly}) {
+  return Row(
+    mainAxisAlignment: axisAlignment,
+    children: [
+      CustomBtn(
+        context: context,
+        label: label1,
+        numWidth: numWidth1,
+        onPressedFunc: onButton1,
+        rgbBgColor: Color.fromRGBO(111, 195, 223, 1),
+        rgbColor: Color.fromRGBO(51, 51, 51, 1),
+      ),
+      CustomBtn(
+        context: context,
+        label: label2,
+        numWidth: numWidth2,
+        onPressedFunc: onButton2,
+        rgbBgColor: Color.fromRGBO(0, 122, 204, 1),
+        rgbColor: Color.fromRGBO(249, 249, 249, 1),
+      ),
+    ],
+  );
 }

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:evolution_cam/components/components.dart';
+import 'package:evolution_cam/components/myDrawer.dart';
 import 'package:evolution_cam/configs/app_controller.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -16,28 +17,11 @@ class _HomeScreenState extends State<HomeScreen> {
   final _auth = FirebaseAuth.instance;
   final _searchController = TextEditingController();
 
-  _currentUser(who) {
-    return who == 'email'
-        ? _auth.currentUser?.email
-        : who == 'name'
-            ? _auth.currentUser?.displayName
-            : _auth.currentUser;
-  }
-
-  Future<void> _searchReg() async {
-    // function to search
-  }
-
   String _convertTStampToDateTime({TStamp}) {
     DateTime date =
         DateTime.fromMillisecondsSinceEpoch(TStamp.millisecondsSinceEpoch);
     String stringDate = date.toString();
     return stringDate.substring(0, 10);
-  }
-
-  void _logOut() async {
-    _auth.signOut();
-    Navigator.of(context).pushReplacementNamed("/login");
   }
 
   @override
@@ -46,46 +30,9 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: Text('EvolutionCam'),
         backgroundColor: Theme.of(context).primaryColor,
-        actions: [CustomSwitch()],
       ),
-      drawer: Drawer(
-        child: Column(
-          children: [
-            UserAccountsDrawerHeader(
-              decoration: BoxDecoration(color: Theme.of(context).primaryColor),
-              accountName: Text(_currentUser('name').toString()),
-              accountEmail: Text(_currentUser('email').toString()),
-            ),
-            Column(
-              children: [
-                ListTile(
-                  leading: Icon(Icons.logout),
-                  title: Text("Sair"),
-                  subtitle: Text("Terminar sessão"),
-                  onTap: () {
-                    _logOut();
-                  },
-                ),
-                ListTile(
-                  leading: Icon(Icons.logout),
-                  title: Text("Sair"),
-                  subtitle: Text("Terminar sessão"),
-                  onTap: () {
-                    _logOut();
-                  },
-                ),
-              ],
-            ),
-            ListTile(
-              leading: Icon(Icons.logout),
-              title: Text("Sair"),
-              subtitle: Text("Terminar sessão"),
-              onTap: () {
-                _logOut();
-              },
-            ),
-          ],
-        ),
+      drawer: MyDrawer(
+        page: 'home',
       ),
       body: Column(
         children: [
@@ -175,18 +122,6 @@ class _HomeScreenState extends State<HomeScreen> {
           onPressed: () {
             Navigator.of(context).pushNamed('/create');
           }),
-    );
-  }
-}
-
-class CustomSwitch extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Switch(
-      value: AppController.instance.isDarkTheme,
-      onChanged: (value) {
-        AppController.instance.changeTheme();
-      },
     );
   }
 }
