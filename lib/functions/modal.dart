@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
-void modalConfirm({context, title = 'Confirmação', content, required actions}) {
+void modalConfirm(
+    {required BuildContext context,
+    title = 'Confirmação',
+    content,
+    required Function actions}) {
   showDialog(
     context: context,
     builder: (BuildContext context) {
@@ -18,7 +22,7 @@ void modalConfirm({context, title = 'Confirmação', content, required actions})
             child: Text('Deletar'),
             onPressed: () {
               Navigator.of(context).pop();
-              () => actions;
+              actions();
             },
           ),
         ],

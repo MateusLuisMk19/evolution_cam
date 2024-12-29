@@ -13,24 +13,24 @@ class _InnerCollestionScreenState extends State<InnerCollestionScreen> {
   final _firestore = FirebaseFirestore.instance;
   final _auth = FirebaseAuth.instance;
 
-  late String id;
-  Map<String, dynamic>? collection; 
-  bool isLoading = true; 
+  late String collectionId;
+  Map<String, dynamic>? collection;
+  bool isLoading = true;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    id = ModalRoute.of(context)!.settings.arguments as String;
+    collectionId = ModalRoute.of(context)!.settings.arguments as String;
 
-    _firestore.collection('colecoes').doc(id).get().then((snapshot) {
+    _firestore.collection('colecoes').doc(collectionId).get().then((snapshot) {
       if (snapshot.exists) {
         setState(() {
           collection = snapshot.data() as Map<String, dynamic>;
-          isLoading = false; 
+          isLoading = false;
         });
       } else {
         setState(() {
-          isLoading = false; 
+          isLoading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Coleção não encontrado.')),
@@ -124,8 +124,8 @@ class _InnerCollestionScreenState extends State<InnerCollestionScreen> {
                       ),
                       iconSize: 30,
                       onPressed: () {
-                        Navigator.of(context).pushNamed('/upload',
-                            arguments: id); 
+                        Navigator.of(context)
+                            .pushNamed('/upload', arguments: collectionId);
                       },
                       icon: Icon(Icons.camera_alt),
                     ),

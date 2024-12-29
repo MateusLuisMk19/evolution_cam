@@ -41,7 +41,8 @@ Widget CustomTextField(
     bool isObscured = false,
     bool inviseble = false,
     double? marginTop,
-    double? marginBottom}) {
+    double? marginBottom,
+    String? initialValue}) {
   if (inviseble) {
     return SizedBox();
   }
@@ -56,7 +57,10 @@ Widget CustomTextField(
         child: Center(
           child: TextField(
             keyboardType: TextInputType.emailAddress,
-            controller: fieldController,
+            controller: initialValue != null
+                ? TextEditingController.fromValue(
+                    TextEditingValue(text: initialValue))
+                : fieldController,
             decoration: InputDecoration(
               fillColor: Theme.of(context).cardColor,
               filled: true,

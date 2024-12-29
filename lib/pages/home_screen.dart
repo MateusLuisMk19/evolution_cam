@@ -3,6 +3,8 @@ import 'package:evolution_cam/components/clickableCard.dart';
 import 'package:evolution_cam/components/components.dart';
 import 'package:evolution_cam/components/myDrawer.dart';
 import 'package:evolution_cam/components/textlabels.dart';
+import 'package:evolution_cam/functions/modal.dart';
+import 'package:evolution_cam/pages/set_colection_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -44,6 +46,17 @@ class _HomeScreenState extends State<HomeScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erro ao buscar coleções: $error')),
+      );
+    }
+  }
+
+  Future<void> _deleteCollection(collectionId) async {
+    try {
+      await _firestore.collection('colecoes').doc(collectionId).delete();
+      await _fetchCollections();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao deletar coleção: $e')),
       );
     }
   }
@@ -95,59 +108,81 @@ class _HomeScreenState extends State<HomeScreen> {
                 return MyClickable(
                   items: [
                     PopupMenuItem(
-                      value: 'edit',
-                      child: Text('Editar'),
-                    ),
+                        value: 'edit',
+                        child: Text('Editar'),
+                        onTap: () {
+                          Future.delayed(
+                            const Duration(seconds: 0),
+                            () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => SetColectionScreen(
+                                  collectionId: collection.id,
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
                     PopupMenuItem(
                       value: 'delete',
                       child: Text('Excluir'),
+                      onTap: () {
+                        modalConfirm(
+                            context: context,
+                            content: 'Deseja realmente excluir a coleção?',
+                            actions: () => _deleteCollection(collection.id));
+                      },
                     ),
                   ],
                   onTap: () {
                     Navigator.of(context)
                         .pushNamed('/inner', arguments: collection.id);
                   },
-                  child: Card(
-                    color: Theme.of(context).cardTheme.color,
-                    elevation: 4,
-                    child: SizedBox(
-                      height: 75,
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 12),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                MyText(
-                                  value: collection['titulo'],
-                                  size: 'md',
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                Text(
-                                  _convertTStampToDateTime(
-                                      TStamp: collection['updatedAt']),
-                                  style: TextStyle(fontSize: 16),
-                                )
-                              ],
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  collection['imgs'].length > 0
-                                      ? '${collection['imgs'].length} arquivo(s)'
-                                      : 'N/A arquivo(s)',
-                                  style: TextStyle(fontSize: 16),
-                                ),
-                                Text(
-                                  collection['categoria'],
-                                  style: TextStyle(fontSize: 16),
-                                )
-                              ],
-                            )
-                          ],
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 10),
+                    child: Card(
+                      color: Theme.of(context).cardTheme.color,
+                      elevation: 4,
+                      child: SizedBox(
+                        height: 75,
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 12),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  MyText(
+                                    value: collection['titulo'],
+                                    size: 'md',
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  Text(
+                                    _convertTStampToDateTime(
+                                        TStamp: collection['updatedAt']),
+                                    style: TextStyle(fontSize: 16),
+                                  )
+                                ],
+                              ),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    collection['imgs'].length > 0
+                                        ? '${collection['imgs'].length} arquivo(s)'
+                                        : 'N/A arquivo(s)',
+                                    style: TextStyle(fontSize: 16),
+                                  ),
+                                  Text(
+                                    collection['categoria'],
+                                    style: TextStyle(fontSize: 16),
+                                  )
+                                ],
+                              )
+                            ],
+                          ),
                         ),
                       ),
                     ),
