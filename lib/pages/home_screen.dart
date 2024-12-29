@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:evolution_cam/components/clickableCard.dart';
 import 'package:evolution_cam/components/components.dart';
 import 'package:evolution_cam/components/myDrawer.dart';
-import 'package:evolution_cam/configs/app_controller.dart';
+import 'package:evolution_cam/components/textlabels.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -17,7 +18,37 @@ class _HomeScreenState extends State<HomeScreen> {
   final _auth = FirebaseAuth.instance;
   final _searchController = TextEditingController();
 
-  String _convertTStampToDateTime({TStamp}) {
+  List<QueryDocumentSnapshot> collections = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCollections();
+  }
+
+  Future<void> _fetchCollections() async {
+    try {
+      final snapshot = await _firestore
+          .collection('colecoes')
+          .where('uid', isEqualTo: _auth.currentUser?.uid)
+          .get();
+
+      setState(() {
+        collections = snapshot.docs;
+        isLoading = false;
+      });
+    } catch (error) {
+      setState(() {
+        isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao buscar coleções: $error')),
+      );
+    }
+  }
+
+  String _convertTStampToDateTime({required Timestamp TStamp}) {
     DateTime date =
         DateTime.fromMillisecondsSinceEpoch(TStamp.millisecondsSinceEpoch);
     String stringDate = date.toString();
@@ -26,6 +57,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('Carregando...'),
+          backgroundColor: Theme.of(context).primaryColor,
+        ),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text('EvolutionCam'),
@@ -37,75 +78,80 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Column(
         children: [
           Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: CustomTextField(
-                  fieldController: _searchController,
-                  placeholder: 'Procurar',
-                  radius: 10,
-                  context: context)),
+            padding: const EdgeInsets.all(16.0),
+            child: CustomTextField(
+              fieldController: _searchController,
+              placeholder: 'Procurar',
+              radius: 10,
+              context: context,
+            ),
+          ),
           Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: _firestore
-                  .collection('registros')
-                  .where('uid', isEqualTo: _auth.currentUser?.uid)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return Center(child: CircularProgressIndicator());
-                }
+            child: ListView.builder(
+              itemCount: collections.length,
+              itemBuilder: (context, index) {
+                final collection = collections[index];
 
-                final registros = snapshot.data!.docs;
-
-                return ListView.builder(
-                  itemCount: registros.length,
-                  itemBuilder: (context, index) {
-                    final registro = registros[index];
-
-                    return Card(
-                      color: Theme.of(context).scaffoldBackgroundColor,
-                      shape: Border.all(),
-                      child: SizedBox(
-                        height: 75,
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    registro['titulo'],
-                                    style: TextStyle(fontSize: 22),
-                                  ),
-                                  Text(
-                                    _convertTStampToDateTime(
-                                        TStamp: registro['updatedAt']),
-                                    style: TextStyle(fontSize: 16),
-                                  )
-                                ],
-                              ),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    '${registro['imgs'].length} registo(s)',
-                                    style: TextStyle(fontSize: 16),
-                                  ),
-                                  Text(
-                                    registro['categoria'],
-                                    style: TextStyle(fontSize: 16),
-                                  )
-                                ],
-                              )
-                            ],
-                          ),
+                return MyClickable(
+                  items: [
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Text('Editar'),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Text('Excluir'),
+                    ),
+                  ],
+                  onTap: () {
+                    Navigator.of(context)
+                        .pushNamed('/inner', arguments: collection.id);
+                  },
+                  child: Card(
+                    color: Theme.of(context).cardTheme.color,
+                    elevation: 4,
+                    child: SizedBox(
+                      height: 75,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                MyText(
+                                  value: collection['titulo'],
+                                  size: 'md',
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                Text(
+                                  _convertTStampToDateTime(
+                                      TStamp: collection['updatedAt']),
+                                  style: TextStyle(fontSize: 16),
+                                )
+                              ],
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  collection['imgs'].length > 0
+                                      ? '${collection['imgs'].length} arquivo(s)'
+                                      : 'N/A arquivo(s)',
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                                Text(
+                                  collection['categoria'],
+                                  style: TextStyle(fontSize: 16),
+                                )
+                              ],
+                            )
+                          ],
                         ),
                       ),
-                    );
-                  },
+                    ),
+                  ),
                 );
               },
             ),
@@ -113,15 +159,16 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-          backgroundColor: Theme.of(context).primaryColor,
-          child: Icon(
-            Icons.add,
-            size: 30,
-            color: Colors.white,
-          ),
-          onPressed: () {
-            Navigator.of(context).pushNamed('/create');
-          }),
+        backgroundColor: Theme.of(context).primaryColor,
+        child: Icon(
+          Icons.add,
+          size: 30,
+          color: Colors.white,
+        ),
+        onPressed: () {
+          Navigator.of(context).pushNamed('/create');
+        },
+      ),
     );
   }
 }

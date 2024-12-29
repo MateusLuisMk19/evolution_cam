@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:evolution_cam/components/components.dart';
 import 'package:evolution_cam/components/myDrawer.dart';
 import 'package:evolution_cam/components/textlabels.dart';
-import 'package:evolution_cam/configs/app_controller.dart';
 import 'package:evolution_cam/functions/modal.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -87,7 +86,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('EvolutionCam'),
+        title: Text('Meu Perfil'),
         backgroundColor: Theme.of(context).primaryColor,
       ),
       drawer: MyDrawer(
@@ -187,7 +186,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             SizedBox(height: 10),
             StreamBuilder<QuerySnapshot>(
               stream: _firestore
-                  .collection('registros')
+                  .collection('colecoes')
                   .where('uid', isEqualTo: _auth.currentUser?.uid)
                   .snapshots(),
               builder: (context, snapshot) {
@@ -195,19 +194,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   return Center(child: CircularProgressIndicator());
                 }
 
-                final registros = snapshot.data!.docs;
+                final collections = snapshot.data!.docs;
 
                 return Column(
                   children: [
                     Row(
                       children: [
                         MyText(
-                          value: 'Registos: ',
+                          value: 'Coleções: ',
                           size: 'md',
                           fontWeight: FontWeight.bold,
                         ),
                         MyText(
-                          value: registros.length.toString(),
+                          value: collections.length.toString(),
                           size: 'md',
                         )
                       ],
@@ -339,12 +338,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                 context: context,
                                                 content:
                                                     'Tem certeza que deseja deletar esta categoria?',
-                                                actions: () {
-                                                  _deleteCategory(
-                                                    categorias,
-                                                    idx,
-                                                  );
-                                                },
+                                                actions: _deleteCategory(
+                                                  categorias,
+                                                  idx,
+                                                ),
                                               );
                                             },
                                           ),

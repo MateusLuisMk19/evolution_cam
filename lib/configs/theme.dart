@@ -5,8 +5,9 @@ class AppColors {
   // Tema Claro
   static const Color primaryLight = Color(0xFF009EEB); // Azul vivo
   static const Color secondaryLight = Color(0xFF53D3F3); // Azul claro brilhante
-  static const Color backgroundLight = Color(0xFFF9F9F9); // Cinza muito claro 
-  static const Color backgroundFormLight = Color(0xFFe9e9e9); // Cinza menos claro 
+  static const Color backgroundLight = Color(0xFFF9F9F9); // Cinza muito claro
+  static const Color backgroundFormLight =
+      Color(0xFFe9e9e9); // Cinza menos claro
   static const Color textLight = Color(0xFF333333); // Cinza escuro
   static const Color textSecondaryLight = Color(0xFF666666); // Cinza médio
   static const Color errorLight = Color(0xFFD9534F); // Vermelho moderado
@@ -14,7 +15,7 @@ class AppColors {
 
   // Tema Escuro
   static const Color primaryDark = Color(0xFF007ACC); // Azul vívido
-  static const Color secondaryDark =  Color(0xFF6FC3DF); // Azul claro suave
+  static const Color secondaryDark = Color(0xFF6FC3DF); // Azul claro suave
   static const Color backgroundDark = Color(0xFF121212); // Preto suave
   static const Color backgroundFormDark = Color(0xFF222222); // Preto suave
   static const Color textDark = Color(0xFFDADADA); // Cinza claro
@@ -27,6 +28,7 @@ class AppColors {
 ThemeData lightTheme = ThemeData(
   brightness: Brightness.light,
   primaryColor: AppColors.primaryLight,
+  secondaryHeaderColor: AppColors.secondaryLight,
   scaffoldBackgroundColor: AppColors.backgroundLight,
   appBarTheme: AppBarTheme(
     color: AppColors.primaryLight,
@@ -42,13 +44,15 @@ ThemeData lightTheme = ThemeData(
     buttonColor: AppColors.primaryLight,
     textTheme: ButtonTextTheme.primary,
   ),
-  cardColor: AppColors.backgroundFormLight
+  cardColor: AppColors.backgroundFormLight,
+  cardTheme: CardTheme(color: AppColors.textDark),
 );
 
 // Tema Escuro
 ThemeData darkTheme = ThemeData(
   brightness: Brightness.dark,
   primaryColor: AppColors.primaryDark,
+  secondaryHeaderColor: AppColors.secondaryDark,
   scaffoldBackgroundColor: AppColors.backgroundDark,
   appBarTheme: AppBarTheme(
     color: AppColors.primaryDark,
@@ -64,7 +68,8 @@ ThemeData darkTheme = ThemeData(
     buttonColor: AppColors.primaryDark,
     textTheme: ButtonTextTheme.primary,
   ),
-  cardColor: AppColors.backgroundFormDark
+  cardColor: AppColors.backgroundFormDark,
+  cardTheme: CardTheme(color: AppColors.textDark),
 );
 
 // Função para alternar temas

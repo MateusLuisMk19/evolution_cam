@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:dropdown_button2/dropdown_button2.dart';
 
 Widget CustomBtn(
     {context,
@@ -56,6 +55,7 @@ Widget CustomTextField(
         height: 50,
         child: Center(
           child: TextField(
+            keyboardType: TextInputType.emailAddress,
             controller: fieldController,
             decoration: InputDecoration(
               fillColor: Theme.of(context).cardColor,

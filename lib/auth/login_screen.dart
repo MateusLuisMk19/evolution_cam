@@ -1,4 +1,5 @@
 import 'package:evolution_cam/components/components.dart';
+import 'package:evolution_cam/configs/theme.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -46,10 +47,16 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image(
-                  image: AssetImage('assets/images/fullLogo.png'),
-                  width: 130,
-                  height: 130,
+                Container(
+                  decoration: BoxDecoration(
+                    color: darkTheme.cardTheme.color,
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: Image(
+                    image: AssetImage('assets/images/fullLogo.png'),
+                    width: 130,
+                    height: 130,
+                  ),
                 ),
                 SizedBox(height: 25),
                 CustomTextField(
@@ -74,7 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       CustomBtn(
                         context: context,
-                        label: "Registar",
+                        label: "Cadastro",
                         numWidth: 3,
                         onPressedFunc: () {
                           Navigator.of(context).pushNamed('/register');

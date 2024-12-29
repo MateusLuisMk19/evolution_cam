@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:evolution_cam/components/components.dart';
+import 'package:evolution_cam/configs/theme.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -74,10 +75,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image(
-                  image: AssetImage('assets/images/fullLogo.png'),
-                  width: 130,
-                  height: 130,
+                Container(
+                  decoration: BoxDecoration(
+                    color: darkTheme.cardTheme.color,
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: Image(
+                    image: AssetImage('assets/images/fullLogo.png'),
+                    width: 130,
+                    height: 130,
+                  ),
                 ),
                 SizedBox(height: 25),
                 CustomTextField(
@@ -133,7 +140,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     SizedBox(height: 10),
                     CustomBtn(
                       context: context,
-                      label: "Registar",
+                      label: "Cadastrar",
                       numWidth: 3,
                       onPressedFunc: _register,
                       rgbBgColor: Color.fromRGBO(0, 122, 204, 1),

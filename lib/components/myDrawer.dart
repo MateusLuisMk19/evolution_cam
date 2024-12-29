@@ -1,4 +1,5 @@
 import 'package:evolution_cam/components/components.dart';
+import 'package:evolution_cam/components/customSwitch.dart';
 import 'package:evolution_cam/components/textlabels.dart';
 import 'package:evolution_cam/configs/app_controller.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -68,16 +69,6 @@ class _MyDrawerState extends State<MyDrawer> {
                     ],
                   )),
               VisibilityBox(
-                  inviseble: widget.page == 'profile' ? true : false,
-                  child: ListTile(
-                    leading: Icon(Icons.person_3_outlined),
-                    title: Text("Perfil"),
-                    subtitle: Text("Gestão de perfil"),
-                    onTap: () {
-                      Navigator.of(context).pushReplacementNamed('/profile');
-                    },
-                  )),
-              VisibilityBox(
                   inviseble: widget.page == 'home' ? true : false,
                   child: ListTile(
                     leading: Icon(Icons.home_outlined),
@@ -85,6 +76,16 @@ class _MyDrawerState extends State<MyDrawer> {
                     subtitle: Text("Pagina inicial"),
                     onTap: () {
                       Navigator.of(context).pushReplacementNamed('/');
+                    },
+                  )),
+              VisibilityBox(
+                  inviseble: widget.page == 'profile' ? true : false,
+                  child: ListTile(
+                    leading: Icon(Icons.person_3_outlined),
+                    title: Text("Perfil"),
+                    subtitle: Text("Gestão de perfil"),
+                    onTap: () {
+                      Navigator.of(context).pushReplacementNamed('/profile');
                     },
                   )),
               /* ListTile(
@@ -114,11 +115,21 @@ class _MyDrawerState extends State<MyDrawer> {
 class CustomSwitch extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Switch(
+    return MyCustomSwitch(
       value: AppController.instance.isDarkTheme,
       onChanged: (value) {
         AppController.instance.changeTheme();
       },
     );
+    /* return Switch(
+      value: AppController.instance.isDarkTheme,
+      onChanged: (value) {
+        AppController.instance.changeTheme();
+      },
+      activeColor: Colors.green, // Cor do botão ativo
+      activeTrackColor: Colors.lightGreenAccent, // Cor da trilha ativa
+      inactiveThumbColor: Colors.red, // Cor do botão inativo
+      inactiveTrackColor: Colors.orange,
+    ); */
   }
 }

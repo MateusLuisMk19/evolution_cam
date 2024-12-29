@@ -1,13 +1,15 @@
 import 'package:evolution_cam/configs/app_controller.dart';
 import 'package:evolution_cam/auth/register_screen.dart';
 import 'package:evolution_cam/configs/theme.dart';
+import 'package:evolution_cam/pages/innerReg_screen.dart';
 import 'package:evolution_cam/pages/profile_screen.dart';
+import 'package:evolution_cam/pages/upload_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'auth/login_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'pages/home_screen.dart';
-import 'pages/create_reg_screen.dart';
+import 'pages/set_colection_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,8 +47,12 @@ class _MainApp extends State<MyApp> {
               '/login': (context) => LoginScreen(),
               '/register': (context) => RegisterScreen(),
               '/': (context) => _choosePage(),
-              '/create': (context) => CreateRegScreen(),
+              '/create': (context) => SetColectionScreen(),
+              '/inner': (context) => InnerCollestionScreen(),
               '/profile': (context) => ProfileScreen(),
+              '/upload': (context) => UploadScreen(
+                    collectionId: '',
+                  ),
             },
           );
         });
