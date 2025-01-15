@@ -22,22 +22,59 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<QueryDocumentSnapshot> collections = [];
   bool isLoading = true;
+  List<QueryDocumentSnapshot> _filteredCollections = [];
 
   @override
   void initState() {
     super.initState();
+    _searchController.addListener(_filterCollections);
     _fetchCollections();
   }
 
+  @override
+  void dispose() {
+    _searchController.removeListener(_filterCollections);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _filterCollections() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      if (query.isEmpty) {
+        _filteredCollections = collections;
+      } else {
+        _filteredCollections = collections.where((doc) {
+          final titulo = doc['titulo'].toString().toLowerCase();
+          final categoria = doc['categoria'].toString().toLowerCase();
+          return titulo.contains(query) || categoria.contains(query);
+        }).toList();
+      }
+
+      // Ordena a lista filtrada por data de atualização
+      _filteredCollections.sort((a, b) {
+        final Timestamp timeA = a['updatedAt'];
+        final Timestamp timeB = b['updatedAt'];
+        return timeB.compareTo(timeA); // Ordem descendente
+      });
+    });
+  }
+
   Future<void> _fetchCollections() async {
+    setState(() {
+      isLoading = true;
+    });
+
     try {
       final snapshot = await _firestore
           .collection('colecoes')
           .where('uid', isEqualTo: _auth.currentUser?.uid)
+          .orderBy('updatedAt', descending: true)
           .get();
 
       setState(() {
         collections = snapshot.docs;
+        _filteredCollections = collections;
         isLoading = false;
       });
     } catch (error) {
@@ -94,102 +131,113 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.all(16.0),
             child: CustomTextField(
               fieldController: _searchController,
-              placeholder: 'Procurar',
+              placeholder: 'Procurar por título ou categoria',
               radius: 10,
               context: context,
+              onChanged: (value) => _filterCollections(),
             ),
           ),
           Expanded(
-            child: ListView.builder(
-              itemCount: collections.length,
-              itemBuilder: (context, index) {
-                final collection = collections[index];
+            child: _filteredCollections.isEmpty
+                ? Center(
+                    child: Text(
+                      'Nenhuma coleção encontrada',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: _filteredCollections.length,
+                    itemBuilder: (context, index) {
+                      final collection = _filteredCollections[index];
 
-                return MyClickable(
-                  items: [
-                    PopupMenuItem(
-                        value: 'edit',
-                        child: Text('Editar'),
-                        onTap: () {
-                          Future.delayed(
-                            const Duration(seconds: 0),
-                            () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => SetColectionScreen(
-                                  collectionId: collection.id,
+                      return MyClickable(
+                        items: [
+                          PopupMenuItem(
+                              value: 'edit',
+                              child: Text('Editar'),
+                              onTap: () {
+                                Future.delayed(
+                                  const Duration(seconds: 0),
+                                  () => Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => SetColectionScreen(
+                                        collectionId: collection.id,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }),
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Text('Excluir'),
+                            onTap: () {
+                              modalConfirm(
+                                  context: context,
+                                  content:
+                                      'Deseja realmente excluir a coleção?',
+                                  actions: () =>
+                                      _deleteCollection(collection.id));
+                            },
+                          ),
+                        ],
+                        onTap: () async {
+                          await Navigator.of(context)
+                              .pushNamed('/inner', arguments: collection.id);
+                          _fetchCollections();
+                        },
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 10),
+                          child: Card(
+                            color: Theme.of(context).cardTheme.color,
+                            elevation: 4,
+                            child: SizedBox(
+                              height: 75,
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 12),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        MyText(
+                                          value: collection['titulo'],
+                                          size: 'md',
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        Text(
+                                          _convertTStampToDateTime(
+                                              TStamp: collection['updatedAt']),
+                                          style: TextStyle(fontSize: 16),
+                                        )
+                                      ],
+                                    ),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          collection['imgs'].length > 0
+                                              ? '${collection['imgs'].length} arquivo(s)'
+                                              : 'N/A arquivo(s)',
+                                          style: TextStyle(fontSize: 16),
+                                        ),
+                                        Text(
+                                          collection['categoria'],
+                                          style: TextStyle(fontSize: 16),
+                                        )
+                                      ],
+                                    )
+                                  ],
                                 ),
                               ),
                             ),
-                          );
-                        }),
-                    PopupMenuItem(
-                      value: 'delete',
-                      child: Text('Excluir'),
-                      onTap: () {
-                        modalConfirm(
-                            context: context,
-                            content: 'Deseja realmente excluir a coleção?',
-                            actions: () => _deleteCollection(collection.id));
-                      },
-                    ),
-                  ],
-                  onTap: () {
-                    Navigator.of(context)
-                        .pushNamed('/inner', arguments: collection.id);
-                  },
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 10),
-                    child: Card(
-                      color: Theme.of(context).cardTheme.color,
-                      elevation: 4,
-                      child: SizedBox(
-                        height: 75,
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  MyText(
-                                    value: collection['titulo'],
-                                    size: 'md',
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  Text(
-                                    _convertTStampToDateTime(
-                                        TStamp: collection['updatedAt']),
-                                    style: TextStyle(fontSize: 16),
-                                  )
-                                ],
-                              ),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    collection['imgs'].length > 0
-                                        ? '${collection['imgs'].length} arquivo(s)'
-                                        : 'N/A arquivo(s)',
-                                    style: TextStyle(fontSize: 16),
-                                  ),
-                                  Text(
-                                    collection['categoria'],
-                                    style: TextStyle(fontSize: 16),
-                                  )
-                                ],
-                              )
-                            ],
                           ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),

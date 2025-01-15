@@ -54,6 +54,10 @@ class _MyDrawerState extends State<MyDrawer> {
                     BoxDecoration(color: Theme.of(context).primaryColor),
                 accountName: Text(_currentUser('name').toString()),
                 accountEmail: Text(_currentUser('email').toString()),
+                onDetailsPressed: () {
+                  Navigator.of(context).pushReplacementNamed('/profile');
+                },
+                arrowColor: Theme.of(context).primaryColor,
               ),
               SizedBox(
                   height: 50,
@@ -68,26 +72,15 @@ class _MyDrawerState extends State<MyDrawer> {
                       CustomSwitch()
                     ],
                   )),
-              VisibilityBox(
-                  inviseble: widget.page == 'home' ? true : false,
-                  child: ListTile(
-                    leading: Icon(Icons.home_outlined),
-                    title: Text("Home"),
-                    subtitle: Text("Pagina inicial"),
-                    onTap: () {
-                      Navigator.of(context).pushReplacementNamed('/');
-                    },
-                  )),
-              VisibilityBox(
-                  inviseble: widget.page == 'profile' ? true : false,
-                  child: ListTile(
-                    leading: Icon(Icons.person_3_outlined),
-                    title: Text("Perfil"),
-                    subtitle: Text("Gestão de perfil"),
-                    onTap: () {
-                      Navigator.of(context).pushReplacementNamed('/profile');
-                    },
-                  )),
+              ListTile(
+                leading: Icon(Icons.home_outlined),
+                title: Text("Home"),
+                subtitle: Text("Pagina inicial"),
+                onTap: () {
+                  Navigator.of(context).pushReplacementNamed('/');
+                },
+              ),
+
               /* ListTile(
                 leading: Icon(Icons.logout),
                 title: Text("Outra coisa"),

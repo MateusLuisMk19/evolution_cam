@@ -1,8 +1,10 @@
+import 'package:evolution_cam/components/addImageInner.dart';
 import 'package:evolution_cam/configs/app_controller.dart';
 import 'package:evolution_cam/auth/register_screen.dart';
 import 'package:evolution_cam/configs/theme.dart';
 import 'package:evolution_cam/pages/innerReg_screen.dart';
 import 'package:evolution_cam/pages/profile_screen.dart';
+import 'package:evolution_cam/pages/showImage_screen.dart';
 import 'package:evolution_cam/pages/upload_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -49,6 +51,8 @@ class _MainApp extends State<MyApp> {
               '/': (context) => _choosePage(),
               '/create': (context) => SetColectionScreen(),
               '/inner': (context) => InnerCollestionScreen(),
+              '/addimage': (context) => Addimageinner(),
+              '/showimage': (context) => ShowImageScreen(),
               '/profile': (context) => ProfileScreen(),
               '/upload': (context) => UploadScreen(
                     collectionId: '',

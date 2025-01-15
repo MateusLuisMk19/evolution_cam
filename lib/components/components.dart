@@ -7,29 +7,37 @@ Widget CustomBtn(
     label,
     rgbColor,
     rgbBgColor,
+    double? marginTop,
+    double? marginBottom,
     Color borderColor = Colors.transparent}) {
   /* = "111, 195, 223, 1" /* = "51,51,51,1" */;*/
 
-  return SizedBox(
-    width: MediaQuery.of(context).size.width / numWidth,
-    height: 38,
-    child: ElevatedButton(
-      onPressed: onPressedFunc,
-      child: Text(
-        label,
-        style: TextStyle(
-          color: rgbColor,
+  return Column(
+    children: [
+      SizedBox(height: marginTop),
+      SizedBox(
+        width: MediaQuery.of(context).size.width / numWidth,
+        height: 38,
+        child: ElevatedButton(
+          onPressed: onPressedFunc,
+          child: Text(
+            label,
+            style: TextStyle(
+              color: rgbColor,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: rgbBgColor,
+            textStyle: TextStyle(fontSize: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+              side: BorderSide(color: borderColor),
+            ),
+          ),
         ),
       ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: rgbBgColor,
-        textStyle: TextStyle(fontSize: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-          side: BorderSide(color: borderColor),
-        ),
-      ),
-    ),
+      SizedBox(height: marginBottom),
+    ],
   );
 }
 
@@ -42,7 +50,8 @@ Widget CustomTextField(
     bool inviseble = false,
     double? marginTop,
     double? marginBottom,
-    String? initialValue}) {
+    String? initialValue,
+    Function(String)? onChanged}) {
   if (inviseble) {
     return SizedBox();
   }
@@ -56,6 +65,7 @@ Widget CustomTextField(
         height: 50,
         child: Center(
           child: TextField(
+            onChanged: onChanged,
             keyboardType: TextInputType.emailAddress,
             controller: initialValue != null
                 ? TextEditingController.fromValue(
@@ -162,5 +172,14 @@ Widget ButtonGroupYN(
         rgbColor: Color.fromRGBO(249, 249, 249, 1),
       ),
     ],
+  );
+}
+
+myToast(BuildContext context, String message) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      margin: EdgeInsets.all(10),
+      content: Text(message),
+    ),
   );
 }

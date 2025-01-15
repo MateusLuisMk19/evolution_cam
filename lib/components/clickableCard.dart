@@ -11,7 +11,7 @@ class MyClickable extends StatefulWidget {
     required this.child,
     this.onTap,
     this.onLongPress,
-    this.items,
+    required this.items,
   }) : super(key: key);
 
   @override
