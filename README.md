@@ -23,9 +23,6 @@
 
 --------------------------------------------------------------------------------------------------------------------------
 
-## 🌟 Objetivo Final
-Criar um aplicativo funcional que será publicado nas plataformas digitais (Google Play Store e App Store).
-
 ## 📂 Estrutura do Repositório
 EvolutionCam/ ├── lib/ │ ├── main.dart # Arquivo principal do Flutter │ ├── screens/ # Telas do aplicativo │ ├── models/ # Modelos de dados │ ├── services/ # Integração com Firebase e outros serviços │ └── widgets/ # Componentes reutilizáveis ├── assets/ # Recursos estáticos (imagens, ícones) ├── pubspec.yaml # Arquivo de dependências do Flutter └── README.md # Informações do projeto
 
