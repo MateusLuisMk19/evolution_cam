@@ -1,4 +1,3 @@
-import 'package:evolution_cam/components/components.dart';
 import 'package:evolution_cam/components/customSwitch.dart';
 import 'package:evolution_cam/components/textlabels.dart';
 import 'package:evolution_cam/configs/app_controller.dart';
