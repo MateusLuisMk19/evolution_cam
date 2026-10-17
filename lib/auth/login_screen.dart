@@ -1,6 +1,6 @@
 import 'package:evolution_cam/components/components.dart';
 import 'package:evolution_cam/configs/theme.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:evolution_cam/services/auth_service.dart';
 import 'package:flutter/material.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -11,29 +11,45 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _auth = FirebaseAuth.instance;
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   String _message = '';
 
-  Future<void> _login() async {
-    try {
-      await _auth.signInWithEmailAndPassword(
-        email: _emailController.text,
-        password: _passwordController.text,
-      );
-      Navigator.of(context).pushReplacementNamed('/');
-    } catch (e) {
-      setState(() {
-        _message = 'Erro: ${e.toString()}';
-      });
-    }
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
-  Future<void> _loginWtGoogle() async {
+  Future<void> _login() async {
+    if (_isLoading) return;
+    if (_emailController.text.trim().isEmpty ||
+        _passwordController.text.isEmpty) {
+      setState(() {
+        _message = 'Preencha o email e a senha';
+      });
+      return;
+    }
+
     setState(() {
-      _message = 'Login com Google ainda não implementado';
+      _isLoading = true;
+      _message = '';
     });
+    try {
+      await AuthService.instance
+          .signIn(_emailController.text, _passwordController.text);
+      if (!mounted) return;
+      Navigator.of(context).pushReplacementNamed('/');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _message = 'Erro: ${errorMessage(e)}';
+      });
+    }
   }
 
   @override
@@ -64,6 +80,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   placeholder: "Email",
                   radius: 15,
                   context: context,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
                 ),
                 SizedBox(height: 15),
                 CustomTextField(
@@ -72,6 +90,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   radius: 15,
                   context: context,
                   isObscured: true,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _login(),
                 ),
                 SizedBox(height: 20),
                 SizedBox(
@@ -91,33 +111,21 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       CustomBtn(
                         context: context,
-                        label: "Entrar",
+                        label: _isLoading ? "A entrar..." : "Entrar",
                         numWidth: 3,
-                        onPressedFunc: _login,
+                        onPressedFunc: _isLoading ? null : _login,
                         rgbBgColor: Color.fromRGBO(0, 122, 204, 1),
                         rgbColor: Color.fromRGBO(249, 249, 249, 1),
                       ),
                     ],
                   ),
                 ),
-                SizedBox(
-                  width: double.infinity,
-                  height: 45,
-                  child: Center(
-                      child: Text(
-                    "Ou",
-                    style: TextStyle(),
-                  )),
+                SizedBox(height: 20),
+                Text(
+                  _message,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
-                CustomBtn(
-                  context: context,
-                  label: "Entrar com Google",
-                  numWidth: 1,
-                  onPressedFunc: _loginWtGoogle,
-                  rgbBgColor: Color.fromRGBO(234, 79, 79, 1),
-                  rgbColor: Color.fromRGBO(249, 249, 249, 1),
-                ),
-                Text(_message),
               ],
             ),
           )),

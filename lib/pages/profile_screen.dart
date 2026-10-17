@@ -1,9 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:evolution_cam/components/components.dart';
-import 'package:evolution_cam/components/myDrawer.dart';
+import 'package:evolution_cam/components/my_drawer.dart';
 import 'package:evolution_cam/components/textlabels.dart';
 import 'package:evolution_cam/functions/modal.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:evolution_cam/services/auth_service.dart';
+import 'package:evolution_cam/services/collection_service.dart';
 import 'package:flutter/material.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -14,72 +14,112 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final _firestore = FirebaseFirestore.instance;
-  final _auth = FirebaseAuth.instance;
+  final _service = CollectionService.instance;
   final _nameController = TextEditingController();
   final _newCategoryController = TextEditingController();
 
   bool _isEditingName = false;
   bool _isEditingNewCategory = false;
+  bool _isLoading = true;
 
+  int _collectionsCount = 0;
+  List<String> _categories = [];
   final List<TextEditingController> _categoryControllers = [];
   final List<bool> _isEditingCategory = [];
 
-  void _initializeCategoryControllers(categorias) {
-    for (var categoria in categorias) {
-      for (var item in categoria['list']) {
-        _categoryControllers.add(TextEditingController(text: item.toString()));
-        _isEditingCategory.add(false);
-      }
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _newCategoryController.dispose();
+    for (final c in _categoryControllers) {
+      c.dispose();
     }
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    try {
+      final results = await Future.wait([
+        _service.count(),
+        _service.categories(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _collectionsCount = results[0] as int;
+        _setCategories(results[1] as List<String>);
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao carregar perfil: ${errorMessage(e)}')),
+      );
+    }
+  }
+
+  // Recria os controladores para acompanharem a lista de categorias.
+  void _setCategories(List<String> categories) {
+    for (final c in _categoryControllers) {
+      c.dispose();
+    }
+    _categories = categories;
+    _categoryControllers
+      ..clear()
+      ..addAll(categories.map((c) => TextEditingController(text: c)));
+    _isEditingCategory
+      ..clear()
+      ..addAll(List.filled(categories.length, false));
   }
 
   _currentUser(option) {
     if (option == 'email') {
-      return _auth.currentUser?.email;
+      return AuthService.instance.email;
     } else if (option == 'name') {
-      return _auth.currentUser?.displayName == ""
+      return AuthService.instance.displayName.isEmpty
           ? 'Nome não definido'
-          : _auth.currentUser?.displayName;
+          : AuthService.instance.displayName;
     } else {
-      return _auth.currentUser;
+      return AuthService.instance.currentUser;
     }
   }
 
-  _deleteCategory(categorias, idx) async {
-    // Obtém a lista de categorias antiga
-    var oldCategList = categorias[0]['list'];
-
-    // apagar elemento do indice idx
-    oldCategList.removeAt(idx);
-
-    // Adiciona uma nova categoria
-    await _firestore
-        .collection("categorias")
-        .doc(categorias[0].id)
-        .update({"list": oldCategList});
-    // Atualiza o estado da página para refletir as novas categorias
-    setState(() {});
+  Future<void> _saveCategories(List<String> updated) async {
+    try {
+      await _service.saveCategories(updated);
+      if (!mounted) return;
+      setState(() {
+        _setCategories(updated);
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Erro ao guardar categorias: ${errorMessage(e)}')),
+      );
+    }
   }
 
-  _addCategory(categorias, idx) async {
-    // Obtém a lista de categorias antiga
-    var oldCategList = categorias[0]['list'];
+  Future<void> _deleteCategory(int idx) =>
+      _saveCategories([..._categories]..removeAt(idx));
 
-    // atualizar a lista de categorias
-    if (idx == false) {
-      oldCategList.add(_newCategoryController.text);
+  Future<void> _addCategory(int? idx) {
+    final updated = [..._categories];
+    if (idx == null) {
+      updated.add(_newCategoryController.text);
+      _newCategoryController.clear();
     } else {
-      oldCategList[idx] = _categoryControllers[idx].text;
+      updated[idx] = _categoryControllers[idx].text;
     }
-
-    // Adiciona uma nova categoria
-    await _firestore
-        .collection("categorias")
-        .doc(categorias[0].id)
-        .update({"list": oldCategList});
-    // Atualiza o estado da página para refletir as novas categorias
-    setState(() {});
+    return _saveCategories(updated);
   }
 
   @override
@@ -155,9 +195,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     return;
                   }
 
-                  // Atualiza o nome no Firebase
-                  await _auth.currentUser
-                      ?.updateDisplayName(_nameController.text);
+                  try {
+                    await AuthService.instance
+                        .updateDisplayName(_nameController.text);
+                  } catch (e) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                          content:
+                              Text('Erro ao guardar nome: ${errorMessage(e)}')),
+                    );
+                    return;
+                  }
 
                   setState(() {
                     _nameController.clear();
@@ -184,50 +233,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
             SizedBox(height: 10),
-            StreamBuilder<QuerySnapshot>(
-              stream: _firestore
-                  .collection('colecoes')
-                  .where('uid', isEqualTo: _auth.currentUser?.uid)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return Center(child: CircularProgressIndicator());
-                }
-
-                final collections = snapshot.data!.docs;
-
-                return Column(
-                  children: [
-                    Row(
-                      children: [
-                        MyText(
-                          value: 'Coleções: ',
-                          size: 'md',
-                          fontWeight: FontWeight.bold,
-                        ),
-                        MyText(
-                          value: collections.length.toString(),
-                          size: 'md',
-                        )
-                      ],
-                    ),
-                  ],
-                );
-              },
+            Row(
+              children: [
+                MyText(
+                  value: 'Coleções: ',
+                  size: 'md',
+                  fontWeight: FontWeight.bold,
+                ),
+                MyText(
+                  value: _collectionsCount.toString(),
+                  size: 'md',
+                )
+              ],
             ),
             SizedBox(height: 10),
-            StreamBuilder<QuerySnapshot>(
-              stream: _firestore
-                  .collection('categorias')
-                  .where('uid', isEqualTo: _auth.currentUser?.uid)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
+            Builder(
+              builder: (context) {
+                if (_isLoading) {
                   return Center(child: CircularProgressIndicator());
                 }
-
-                final categorias = snapshot.data!.docs;
-                _initializeCategoryControllers(categorias);
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -288,7 +312,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 },
                                 onButton2: () {
                                   setState(() {
-                                    _addCategory(categorias, false);
+                                    _addCategory(null);
                                     _isEditingNewCategory = false;
                                   });
                                 },
@@ -302,7 +326,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: ListView(
                         shrinkWrap:
                             true, // Evita que o ListView ocupe todo o espaço disponível
-                        children: categorias[0]['list']
+                        children: _categories
                             .asMap() // Converte a lista em um mapa para acessar índices
                             .entries
                             .map<Widget>((entry) {
@@ -338,10 +362,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                 context: context,
                                                 content:
                                                     'Tem certeza que deseja deletar esta categoria?',
-                                                actions: _deleteCategory(
-                                                  categorias,
-                                                  idx,
-                                                ),
+                                                actions: () =>
+                                                    _deleteCategory(idx),
                                               );
                                             },
                                           ),
@@ -368,13 +390,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     onButton1: () {
                                       setState(() {
                                         _isEditingCategory[idx] = false;
-                                        _categoryControllers[idx].clear();
+                                        _categoryControllers[idx].text =
+                                            _categories[idx];
                                       });
                                     },
                                     onButton2: () {
                                       // Salvar alterações
                                       setState(() {
-                                        _addCategory(categorias, idx);
+                                        _addCategory(idx);
                                         _isEditingCategory[idx] = false;
                                       });
                                     },

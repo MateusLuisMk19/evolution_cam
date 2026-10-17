@@ -52,7 +52,6 @@ class _CustomSelectFieldState extends State<CustomSelectField> {
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton2<String>(
-              
                 isExpanded: true,
                 hint: Text(
                   widget.hint,

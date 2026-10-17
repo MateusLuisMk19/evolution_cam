@@ -1,7 +1,7 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:evolution_cam/services/auth_service.dart';
+import 'package:evolution_cam/services/collection_service.dart';
 import 'package:evolution_cam/components/components.dart';
-import 'package:evolution_cam/components/customSelectField.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:evolution_cam/components/custom_select_field.dart';
 import 'package:flutter/material.dart';
 
 class SetColectionScreen extends StatefulWidget {
@@ -13,8 +13,7 @@ class SetColectionScreen extends StatefulWidget {
 }
 
 class _SetColectionScreenState extends State<SetColectionScreen> {
-  final _firestore = FirebaseFirestore.instance;
-  final _auth = FirebaseAuth.instance;
+  final _service = CollectionService.instance;
 
   final _titleController = TextEditingController();
   final _categoryController = TextEditingController();
@@ -23,7 +22,6 @@ class _SetColectionScreenState extends State<SetColectionScreen> {
   bool _isOutherCategory = false;
   String _message = '';
   List<String> _categories = [];
-  String _categoryId = '';
   bool isEditing = false;
 
   @override
@@ -38,66 +36,55 @@ class _SetColectionScreenState extends State<SetColectionScreen> {
 
   Future<void> _loadCategories() async {
     try {
-      final snapshot = await _firestore
-          .collection('categorias')
-          .where('uid', isEqualTo: _auth.currentUser?.uid)
-          .get();
-
-      if (snapshot.docs.isNotEmpty) {
-        setState(() {
-          _categories = List<String>.from(snapshot.docs[0]['list']);
-          _categoryId = snapshot.docs[0].id;
-        });
-      }
-    } catch (e) {
+      final categories = await _service.categories();
+      if (!mounted) return;
       setState(() {
-        _message = 'Erro ao carregar categorias: $e';
+        _categories = categories;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _message = 'Erro ao carregar categorias: ${errorMessage(e)}';
       });
     }
   }
 
   Future<void> _loadCollection() async {
     try {
-      final doc = await _firestore
-          .collection('colecoes')
-          .doc(widget.collectionId)
-          .get();
-
-      if (doc.exists) {
+      final data = await _service.get(widget.collectionId!);
+      if (data != null && mounted) {
         setState(() {
-          _titleController.text = doc.data()?['titulo'] ?? '';
-          _categoryController.text = doc.data()?['categoria'] ?? '';
+          _titleController.text = data['titulo'] ?? '';
+          _categoryController.text = data['categoria'] ?? '';
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
-        _message = 'Erro ao carregar coleção: $e';
+        _message = 'Erro ao carregar coleção: ${errorMessage(e)}';
       });
     }
   }
 
   Future<void> _addCollection() async {
-    if (_titleController.text.isEmpty || _categoryController.text.isEmpty) {
+    if (_titleController.text.trim().isEmpty ||
+        _categoryController.text.isEmpty) {
+      setState(() {
+        _message = 'Preenche o título e escolhe uma categoria';
+      });
       return;
     }
     try {
-      await _firestore.collection('colecoes').add({
-        'uid': _auth.currentUser?.uid,
-        'titulo': _titleController.text,
-        'categoria': _categoryController.text,
-        'imgs': [],
-        'createdAt': Timestamp.fromDate(DateTime.now()),
-        'updatedAt': Timestamp.fromDate(DateTime.now()),
-      });
-      _titleController.clear();
-      _categoryController.clear();
-      setState(() {
-        _message = 'Success! Coleção added successfully';
-      });
+      await _service.create(
+        title: _titleController.text,
+        category: _categoryController.text,
+      );
+      if (!mounted) return;
       Navigator.of(context).pushReplacementNamed('/');
     } catch (e) {
+      if (!mounted) return;
       setState(() {
-        _message = 'Erro: ${e.toString()}';
+        _message = 'Erro: ${errorMessage(e)}';
       });
     }
   }
@@ -106,46 +93,45 @@ class _SetColectionScreenState extends State<SetColectionScreen> {
     if (_newCategoryController.text.isEmpty) return;
 
     try {
-      // Adiciona a nova categoria
-      _categories.add(_newCategoryController.text);
-
-      // Atualiza a coleção no Firestore
-      await _firestore.collection("categorias").doc(_categoryId).update({
-        "list": _categories,
-      });
+      final updated = [..._categories, _newCategoryController.text];
+      await _service.saveCategories(updated);
+      if (!mounted) return;
 
       setState(() {
-        _categoryController.clear();
+        _categories = updated;
         _categoryController.text = _newCategoryController.text;
         _newCategoryController.clear();
         _isOutherCategory = false;
         _message = 'Categoria adicionada com sucesso';
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
-        _message = 'Erro ao adicionar categoria: $e';
+        _message = 'Erro ao adicionar categoria: ${errorMessage(e)}';
       });
     }
   }
 
   Future<void> _updateCollection() async {
-    if (_titleController.text.isEmpty || _categoryController.text.isEmpty) {
+    if (_titleController.text.trim().isEmpty ||
+        _categoryController.text.isEmpty) {
+      setState(() {
+        _message = 'Preenche o título e escolhe uma categoria';
+      });
       return;
     }
     try {
-      await _firestore.collection('colecoes').doc(widget.collectionId).update({
-        'titulo': _titleController.text,
-        'categoria': _categoryController.text,
-        'updatedAt': Timestamp.fromDate(DateTime.now()),
-      });
-
-      setState(() {
-        _message = 'Coleção atualizada com sucesso!';
-      });
+      await _service.update(
+        widget.collectionId!,
+        title: _titleController.text,
+        category: _categoryController.text,
+      );
+      if (!mounted) return;
       Navigator.of(context).pushReplacementNamed('/');
     } catch (e) {
+      if (!mounted) return;
       setState(() {
-        _message = 'Erro ao atualizar: ${e.toString()}';
+        _message = 'Erro ao atualizar: ${errorMessage(e)}';
       });
     }
   }

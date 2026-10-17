@@ -1,7 +1,7 @@
-import 'package:evolution_cam/components/customSwitch.dart';
+import 'package:evolution_cam/components/custom_switch.dart';
 import 'package:evolution_cam/components/textlabels.dart';
 import 'package:evolution_cam/configs/app_controller.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:evolution_cam/services/auth_service.dart';
 import 'package:flutter/material.dart';
 
 class MyDrawer extends StatefulWidget {
@@ -17,19 +17,19 @@ class MyDrawer extends StatefulWidget {
 }
 
 class _MyDrawerState extends State<MyDrawer> {
-  final _auth = FirebaseAuth.instance;
   String? selectedValue;
 
   _currentUser(who) {
     return who == 'email'
-        ? _auth.currentUser?.email
+        ? AuthService.instance.email
         : who == 'name'
-            ? _auth.currentUser?.displayName
-            : _auth.currentUser;
+            ? AuthService.instance.displayName
+            : AuthService.instance.currentUser;
   }
 
   void _logOut() async {
-    _auth.signOut();
+    await AuthService.instance.signOut();
+    if (!mounted) return;
     Navigator.of(context).pushReplacementNamed("/login");
   }
 
@@ -74,9 +74,19 @@ class _MyDrawerState extends State<MyDrawer> {
               ListTile(
                 leading: Icon(Icons.home_outlined),
                 title: Text("Home"),
-                subtitle: Text("Pagina inicial"),
+                subtitle: Text("Página inicial"),
+                selected: widget.page == 'home',
                 onTap: () {
                   Navigator.of(context).pushReplacementNamed('/');
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.person_outline),
+                title: Text("Perfil"),
+                subtitle: Text("Nome e categorias"),
+                selected: widget.page == 'profile',
+                onTap: () {
+                  Navigator.of(context).pushReplacementNamed('/profile');
                 },
               ),
 
@@ -90,13 +100,16 @@ class _MyDrawerState extends State<MyDrawer> {
               ),*/
             ],
           ),
-          ListTile(
-            leading: Icon(Icons.logout_sharp),
-            title: Text("Sair"),
-            subtitle: Text("Terminar sessão"),
-            onTap: () {
-              _logOut();
-            },
+          SafeArea(
+            top: false,
+            child: ListTile(
+              leading: Icon(Icons.logout_sharp),
+              title: Text("Sair"),
+              subtitle: Text("Terminar sessão"),
+              onTap: () {
+                _logOut();
+              },
+            ),
           ),
         ],
       ),

@@ -1,21 +1,24 @@
-import 'package:evolution_cam/components/addImageInner.dart';
+import 'package:evolution_cam/components/add_image_inner.dart';
 import 'package:evolution_cam/configs/app_controller.dart';
 import 'package:evolution_cam/auth/register_screen.dart';
 import 'package:evolution_cam/configs/theme.dart';
-import 'package:evolution_cam/pages/innerReg_screen.dart';
+import 'package:evolution_cam/pages/inner_reg_screen.dart';
 import 'package:evolution_cam/pages/profile_screen.dart';
-import 'package:evolution_cam/pages/showImage_screen.dart';
-import 'package:evolution_cam/pages/upload_screen.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'package:evolution_cam/pages/show_image_screen.dart';
+import 'package:evolution_cam/configs/supabase_config.dart';
+import 'package:evolution_cam/services/auth_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import 'auth/login_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'pages/home_screen.dart';
-import 'pages/set_colection_screen.dart';
+import 'pages/set_collection_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  await Supabase.initialize(
+    url: SupabaseConfig.url,
+    publishableKey: SupabaseConfig.publishableKey,
+  );
   runApp(MyApp());
 }
 
@@ -27,10 +30,8 @@ class MyApp extends StatefulWidget {
 }
 
 class _MainApp extends State<MyApp> {
-  final _auth = FirebaseAuth.instance;
-
   Widget _choosePage() {
-    if (_auth.currentUser != null) {
+    if (AuthService.instance.isLoggedIn) {
       return HomeScreen();
     }
     return LoginScreen();
@@ -54,9 +55,6 @@ class _MainApp extends State<MyApp> {
               '/addimage': (context) => Addimageinner(),
               '/showimage': (context) => ShowImageScreen(),
               '/profile': (context) => ProfileScreen(),
-              '/upload': (context) => UploadScreen(
-                    collectionId: '',
-                  ),
             },
           );
         });

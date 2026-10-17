@@ -51,7 +51,10 @@ Widget CustomTextField(
     double? marginTop,
     double? marginBottom,
     String? initialValue,
-    Function(String)? onChanged}) {
+    TextInputType? keyboardType,
+    TextInputAction? textInputAction,
+    Function(String)? onChanged,
+    Function(String)? onSubmitted}) {
   if (inviseble) {
     return SizedBox();
   }
@@ -66,7 +69,14 @@ Widget CustomTextField(
         child: Center(
           child: TextField(
             onChanged: onChanged,
-            keyboardType: TextInputType.emailAddress,
+            onSubmitted: onSubmitted,
+            textInputAction: textInputAction,
+            keyboardType: keyboardType ??
+                (isObscured
+                    ? TextInputType.visiblePassword
+                    : TextInputType.text),
+            autocorrect: !isObscured,
+            enableSuggestions: !isObscured,
             controller: initialValue != null
                 ? TextEditingController.fromValue(
                     TextEditingValue(text: initialValue))
@@ -178,6 +188,7 @@ Widget ButtonGroupYN(
 myToast(BuildContext context, String message) {
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
+      behavior: SnackBarBehavior.floating,
       margin: EdgeInsets.all(10),
       content: Text(message),
     ),

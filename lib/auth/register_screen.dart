@@ -1,7 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:evolution_cam/components/components.dart';
 import 'package:evolution_cam/configs/theme.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:evolution_cam/services/auth_service.dart';
 import 'package:flutter/material.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -12,8 +11,6 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final _auth = FirebaseAuth.instance;
-  final _firestore = FirebaseFirestore.instance;
   final _nameController = TextEditingController();
   final _surnameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -21,45 +18,76 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordConfirmController = TextEditingController();
   String _message = '';
 
-  Future<void> _register() async {
-    if (_nameController.text == '' ||
-        _surnameController.text == '' ||
-        _emailController.text == '' ||
-        _passwordController.text == '' ||
-        _passwordConfirmController.text == '') {
-      setState(() {
-        _message = 'Preencha todos os campos';
-      });
-      return;
-    }
+  bool _isLoading = false;
 
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _surnameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _passwordConfirmController.dispose();
+    super.dispose();
+  }
+
+  String? _validate() {
+    if (_nameController.text.trim().isEmpty ||
+        _surnameController.text.trim().isEmpty ||
+        _emailController.text.trim().isEmpty ||
+        _passwordController.text.isEmpty ||
+        _passwordConfirmController.text.isEmpty) {
+      return 'Preencha todos os campos';
+    }
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+        .hasMatch(_emailController.text.trim())) {
+      return 'Email inválido';
+    }
+    if (_passwordController.text.length < 6) {
+      return 'A senha deve ter pelo menos 6 caracteres';
+    }
     if (_passwordController.text != _passwordConfirmController.text) {
+      return 'As senhas não conferem';
+    }
+    return null;
+  }
+
+  Future<void> _register() async {
+    if (_isLoading) return;
+
+    final problem = _validate();
+    if (problem != null) {
       setState(() {
-        _message = 'As senhas não conferem';
+        _message = problem;
       });
       return;
     }
 
+    setState(() {
+      _isLoading = true;
+      _message = '';
+    });
     try {
-      await _auth.createUserWithEmailAndPassword(
+      final hasSession = await AuthService.instance.signUp(
+        name: '${_nameController.text} ${_surnameController.text}'.trim(),
         email: _emailController.text,
         password: _passwordController.text,
       );
+      if (!mounted) return;
 
-      await _auth.currentUser!.updateProfile(
-          displayName: '${_nameController.text} ${_surnameController.text}');
-
-      await _firestore.collection('categorias').add({
-        'uid': _auth.currentUser?.uid,
-        'list': ["Paisagem", "Limpeza", "Construção"]
-      });
-
-      setState(() {
-        _message = 'Registro realizado com sucesso!';
-      });
+      if (hasSession) {
+        Navigator.of(context).pushReplacementNamed('/');
+      } else {
+        setState(() {
+          _isLoading = false;
+          _message =
+              'Registro realizado! Confirma o teu email e depois faz login.';
+        });
+      }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
-        _message = 'Erro: ${e.toString()}';
+        _isLoading = false;
+        _message = 'Erro: ${errorMessage(e)}';
       });
     }
   }
@@ -106,6 +134,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   placeholder: "Email",
                   radius: 15,
                   context: context,
+                  keyboardType: TextInputType.emailAddress,
                 ),
                 SizedBox(height: 15),
                 CustomTextField(
@@ -140,15 +169,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     SizedBox(height: 10),
                     CustomBtn(
                       context: context,
-                      label: "Cadastrar",
+                      label: _isLoading ? "A registar..." : "Cadastrar",
                       numWidth: 3,
-                      onPressedFunc: _register,
+                      onPressedFunc: _isLoading ? null : _register,
                       rgbBgColor: Color.fromRGBO(0, 122, 204, 1),
                       rgbColor: Color.fromRGBO(249, 249, 249, 1),
                     ),
                   ],
                 ),
-                Text(_message),
+                Padding(
+                  padding: EdgeInsets.only(top: 12),
+                  child: Text(_message, textAlign: TextAlign.center),
+                ),
               ],
             ),
           )),

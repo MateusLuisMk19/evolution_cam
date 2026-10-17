@@ -1,11 +1,11 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:evolution_cam/components/clickableCard.dart';
+import 'package:evolution_cam/services/auth_service.dart';
+import 'package:evolution_cam/services/collection_service.dart';
+import 'package:evolution_cam/components/clickable_card.dart';
 import 'package:evolution_cam/components/components.dart';
-import 'package:evolution_cam/components/myDrawer.dart';
+import 'package:evolution_cam/components/my_drawer.dart';
 import 'package:evolution_cam/components/textlabels.dart';
 import 'package:evolution_cam/functions/modal.dart';
-import 'package:evolution_cam/pages/set_colection_screen.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:evolution_cam/pages/set_collection_screen.dart';
 import 'package:flutter/material.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -16,13 +16,12 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final _firestore = FirebaseFirestore.instance;
-  final _auth = FirebaseAuth.instance;
+  final _service = CollectionService.instance;
   final _searchController = TextEditingController();
 
-  List<QueryDocumentSnapshot> collections = [];
+  List<Map<String, dynamic>> collections = [];
   bool isLoading = true;
-  List<QueryDocumentSnapshot> _filteredCollections = [];
+  List<Map<String, dynamic>> _filteredCollections = [];
 
   @override
   void initState() {
@@ -42,7 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final query = _searchController.text.toLowerCase();
     setState(() {
       if (query.isEmpty) {
-        _filteredCollections = collections;
+        _filteredCollections = List.of(collections);
       } else {
         _filteredCollections = collections.where((doc) {
           final titulo = doc['titulo'].toString().toLowerCase();
@@ -53,57 +52,54 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // Ordena a lista filtrada por data de atualização
       _filteredCollections.sort((a, b) {
-        final Timestamp timeA = a['updatedAt'];
-        final Timestamp timeB = b['updatedAt'];
+        final DateTime timeA = a['updatedAt'];
+        final DateTime timeB = b['updatedAt'];
         return timeB.compareTo(timeA); // Ordem descendente
       });
     });
   }
 
-  Future<void> _fetchCollections() async {
-    setState(() {
-      isLoading = true;
-    });
+  Future<void> _fetchCollections({bool silent = false}) async {
+    if (!silent) {
+      setState(() {
+        isLoading = true;
+      });
+    }
 
     try {
-      final snapshot = await _firestore
-          .collection('colecoes')
-          .where('uid', isEqualTo: _auth.currentUser?.uid)
-          .orderBy('updatedAt', descending: true)
-          .get();
-
+      final data = await _service.list();
+      if (!mounted) return;
       setState(() {
-        collections = snapshot.docs;
-        _filteredCollections = collections;
+        collections = data;
+        _filteredCollections = List.of(data);
         isLoading = false;
       });
+      _filterCollections();
     } catch (error) {
+      if (!mounted) return;
       setState(() {
         isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao buscar coleções: $error')),
+        SnackBar(
+            content: Text('Erro ao buscar coleções: ${errorMessage(error)}')),
       );
     }
   }
 
-  Future<void> _deleteCollection(collectionId) async {
+  Future<void> _deleteCollection(String collectionId) async {
     try {
-      await _firestore.collection('colecoes').doc(collectionId).delete();
+      await _service.delete(collectionId);
       await _fetchCollections();
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao deletar coleção: $e')),
+        SnackBar(content: Text('Erro ao deletar coleção: ${errorMessage(e)}')),
       );
     }
   }
 
-  String _convertTStampToDateTime({required Timestamp TStamp}) {
-    DateTime date =
-        DateTime.fromMillisecondsSinceEpoch(TStamp.millisecondsSinceEpoch);
-    String stringDate = date.toString();
-    return stringDate.substring(0, 10);
-  }
+  String _formatDate(DateTime date) => date.toString().substring(0, 10);
 
   @override
   Widget build(BuildContext context) {
@@ -145,98 +141,103 @@ class _HomeScreenState extends State<HomeScreen> {
                       style: TextStyle(fontSize: 16),
                     ),
                   )
-                : ListView.builder(
-                    itemCount: _filteredCollections.length,
-                    itemBuilder: (context, index) {
-                      final collection = _filteredCollections[index];
+                : RefreshIndicator(
+                    onRefresh: () => _fetchCollections(silent: true),
+                    child: ListView.builder(
+                      physics: AlwaysScrollableScrollPhysics(),
+                      itemCount: _filteredCollections.length,
+                      itemBuilder: (context, index) {
+                        final collection = _filteredCollections[index];
 
-                      return MyClickable(
-                        items: [
-                          PopupMenuItem(
-                              value: 'edit',
-                              child: Text('Editar'),
-                              onTap: () {
-                                Future.delayed(
-                                  const Duration(seconds: 0),
-                                  () => Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => SetColectionScreen(
-                                        collectionId: collection.id,
+                        return MyClickable(
+                          items: [
+                            PopupMenuItem(
+                                value: 'edit',
+                                child: Text('Editar'),
+                                onTap: () {
+                                  Future.delayed(
+                                    const Duration(seconds: 0),
+                                    () => Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            SetColectionScreen(
+                                          collectionId: collection['id'],
+                                        ),
                                       ),
                                     ),
+                                  );
+                                }),
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: Text('Excluir'),
+                              onTap: () {
+                                modalConfirm(
+                                    context: context,
+                                    content:
+                                        'Deseja realmente excluir a coleção?',
+                                    actions: () =>
+                                        _deleteCollection(collection['id']));
+                              },
+                            ),
+                          ],
+                          onTap: () async {
+                            await Navigator.of(context).pushNamed('/inner',
+                                arguments: collection['id']);
+                            _fetchCollections();
+                          },
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 10),
+                            child: Card(
+                              color: Theme.of(context).cardTheme.color,
+                              elevation: 4,
+                              child: SizedBox(
+                                height: 75,
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 12),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          MyText(
+                                            value: collection['titulo'],
+                                            size: 'md',
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          Text(
+                                            _formatDate(
+                                                collection['updatedAt']),
+                                            style: TextStyle(fontSize: 16),
+                                          )
+                                        ],
+                                      ),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            collection['imgCount'] > 0
+                                                ? '${collection['imgCount']} arquivo(s)'
+                                                : 'N/A arquivo(s)',
+                                            style: TextStyle(fontSize: 16),
+                                          ),
+                                          Text(
+                                            collection['categoria'],
+                                            style: TextStyle(fontSize: 16),
+                                          )
+                                        ],
+                                      )
+                                    ],
                                   ),
-                                );
-                              }),
-                          PopupMenuItem(
-                            value: 'delete',
-                            child: Text('Excluir'),
-                            onTap: () {
-                              modalConfirm(
-                                  context: context,
-                                  content:
-                                      'Deseja realmente excluir a coleção?',
-                                  actions: () =>
-                                      _deleteCollection(collection.id));
-                            },
-                          ),
-                        ],
-                        onTap: () async {
-                          await Navigator.of(context)
-                              .pushNamed('/inner', arguments: collection.id);
-                          _fetchCollections();
-                        },
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 10),
-                          child: Card(
-                            color: Theme.of(context).cardTheme.color,
-                            elevation: 4,
-                            child: SizedBox(
-                              height: 75,
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 12),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        MyText(
-                                          value: collection['titulo'],
-                                          size: 'md',
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                        Text(
-                                          _convertTStampToDateTime(
-                                              TStamp: collection['updatedAt']),
-                                          style: TextStyle(fontSize: 16),
-                                        )
-                                      ],
-                                    ),
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          collection['imgs'].length > 0
-                                              ? '${collection['imgs'].length} arquivo(s)'
-                                              : 'N/A arquivo(s)',
-                                          style: TextStyle(fontSize: 16),
-                                        ),
-                                        Text(
-                                          collection['categoria'],
-                                          style: TextStyle(fontSize: 16),
-                                        )
-                                      ],
-                                    )
-                                  ],
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
           ),
         ],
