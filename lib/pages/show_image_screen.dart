@@ -1,17 +1,17 @@
-import 'package:evolution_cam/configs/theme.dart';
 import 'package:flutter/material.dart';
 
+/// Visualizador de uma foto: zoom por pinça e duplo toque.
 class ShowImageScreen extends StatefulWidget {
   const ShowImageScreen({Key? key}) : super(key: key);
 
   @override
-  _ShowImageScreenState createState() => _ShowImageScreenState();
+  State<ShowImageScreen> createState() => _ShowImageScreenState();
 }
 
 class _ShowImageScreenState extends State<ShowImageScreen> {
   late String imageUrl;
   final TransformationController _controller = TransformationController();
-  late TapDownDetails _doubleTapDetails;
+  Offset _doubleTapPosition = Offset.zero;
 
   @override
   void dispose() {
@@ -25,19 +25,14 @@ class _ShowImageScreenState extends State<ShowImageScreen> {
     imageUrl = ModalRoute.of(context)!.settings.arguments as String;
   }
 
-  void _handleDoubleTapDown(TapDownDetails details) {
-    _doubleTapDetails = details;
-  }
-
   void _handleDoubleTap() {
     if (_controller.value != Matrix4.identity()) {
-      // Se já estiver com zoom, volta ao normal
       _controller.value = Matrix4.identity();
     } else {
-      // Se estiver normal, dá zoom de 2x no ponto tocado
-      final position = _doubleTapDetails.localPosition;
+      // Zoom de 2,5x no ponto tocado.
+      final p = _doubleTapPosition;
       _controller.value = Matrix4.identity()
-        ..translate(-position.dx * 1.5, -position.dy * 1.5)
+        ..translate(-p.dx * 1.5, -p.dy * 1.5)
         ..scale(2.5);
     }
   }
@@ -45,51 +40,68 @@ class _ShowImageScreenState extends State<ShowImageScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.backgroundDark,
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).primaryColor,
-      ),
-      body: SafeArea(
-        child: Center(
-          child: GestureDetector(
-            onDoubleTapDown: _handleDoubleTapDown,
+      backgroundColor: Colors.black,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          GestureDetector(
+            onDoubleTapDown: (d) => _doubleTapPosition = d.localPosition,
             onDoubleTap: _handleDoubleTap,
             child: InteractiveViewer(
               transformationController: _controller,
-              minScale: 0.5,
-              maxScale: 4.0,
-              child: Image.network(
-                imageUrl,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Center(
-                    child: CircularProgressIndicator(
-                      value: loadingProgress.expectedTotalBytes != null
-                          ? loadingProgress.cumulativeBytesLoaded /
-                              loadingProgress.expectedTotalBytes!
-                          : null,
-                    ),
-                  );
-                },
-                errorBuilder: (context, error, stackTrace) {
-                  return Center(
+              minScale: 0.8,
+              maxScale: 5,
+              child: Center(
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                  loadingBuilder: (context, child, progress) {
+                    if (progress == null) return child;
+                    return Center(
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        value: progress.expectedTotalBytes != null
+                            ? progress.cumulativeBytesLoaded /
+                                progress.expectedTotalBytes!
+                            : null,
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) => const Center(
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.error_outline, size: 48, color: Colors.red),
-                        SizedBox(height: 16),
-                        Text(
-                          'Erro ao carregar imagem',
-                          style: TextStyle(color: Colors.white),
-                        ),
+                        Icon(Icons.broken_image_outlined,
+                            size: 48, color: Colors.white70),
+                        SizedBox(height: 12),
+                        Text('Não foi possível carregar a imagem',
+                            style: TextStyle(color: Colors.white70)),
                       ],
                     ),
-                  );
-                },
+                  ),
+                ),
               ),
             ),
           ),
-        ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: IconButton.filled(
+                  tooltip: 'Fechar',
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.black54,
+                    foregroundColor: Colors.white,
+                    fixedSize: const Size(48, 48),
+                  ),
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

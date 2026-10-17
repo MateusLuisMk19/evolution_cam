@@ -4,7 +4,7 @@ class GridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.5) // Cor e opacidade da grade
+      ..color = Colors.white.withValues(alpha: 0.5) // Cor e opacidade da grade
       ..strokeWidth = 1.0;
 
     // Linhas verticais

@@ -1,5 +1,5 @@
-import 'package:evolution_cam/components/components.dart';
-import 'package:evolution_cam/configs/theme.dart';
+import 'package:evolution_cam/auth/auth_shell.dart';
+import 'package:evolution_cam/components/app_widgets.dart';
 import 'package:evolution_cam/services/auth_service.dart';
 import 'package:flutter/material.dart';
 
@@ -7,7 +7,7 @@ class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
 
   @override
-  _RegisterScreenState createState() => _RegisterScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
@@ -17,7 +17,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _passwordConfirmController = TextEditingController();
   String _message = '';
-
+  bool _messageIsError = true;
   bool _isLoading = false;
 
   @override
@@ -58,6 +58,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (problem != null) {
       setState(() {
         _message = problem;
+        _messageIsError = true;
       });
       return;
     }
@@ -75,115 +76,90 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!mounted) return;
 
       if (hasSession) {
-        Navigator.of(context).pushReplacementNamed('/');
+        Navigator.of(context).pushNamedAndRemoveUntil('/', (_) => false);
       } else {
         setState(() {
           _isLoading = false;
-          _message =
-              'Registro realizado! Confirma o teu email e depois faz login.';
+          _messageIsError = false;
+          _message = 'Conta criada! Confirme o seu email e depois faça login.';
         });
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _message = 'Erro: ${errorMessage(e)}';
+        _messageIsError = true;
+        _message = errorMessage(e);
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SizedBox(
-          width: double.infinity,
-          height: double.infinity,
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 60),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    color: darkTheme.cardTheme.color,
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: Image(
-                    image: AssetImage('assets/images/fullLogo.png'),
-                    width: 130,
-                    height: 130,
-                  ),
-                ),
-                SizedBox(height: 25),
-                CustomTextField(
-                  fieldController: _nameController,
-                  placeholder: "Nome",
-                  radius: 15,
-                  context: context,
-                ),
-                SizedBox(height: 15),
-                CustomTextField(
-                  fieldController: _surnameController,
-                  placeholder: "Sobrenome",
-                  radius: 15,
-                  context: context,
-                ),
-                SizedBox(height: 15),
-                CustomTextField(
-                  fieldController: _emailController,
-                  placeholder: "Email",
-                  radius: 15,
-                  context: context,
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                SizedBox(height: 15),
-                CustomTextField(
-                  fieldController: _passwordController,
-                  placeholder: "Senha",
-                  radius: 15,
-                  context: context,
-                  isObscured: true,
-                ),
-                SizedBox(height: 15),
-                CustomTextField(
-                  fieldController: _passwordConfirmController,
-                  placeholder: "Confirmar Senha",
-                  radius: 15,
-                  context: context,
-                  isObscured: true,
-                ),
-                SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    CustomBtn(
-                      context: context,
-                      label: "Cancelar",
-                      numWidth: 3,
-                      onPressedFunc: () {
-                        Navigator.of(context).pushReplacementNamed('/login');
-                      },
-                      rgbBgColor: Color.fromRGBO(111, 195, 223, 1),
-                      rgbColor: Color.fromRGBO(51, 51, 51, 1),
-                    ),
-                    SizedBox(height: 10),
-                    CustomBtn(
-                      context: context,
-                      label: _isLoading ? "A registar..." : "Cadastrar",
-                      numWidth: 3,
-                      onPressedFunc: _isLoading ? null : _register,
-                      rgbBgColor: Color.fromRGBO(0, 122, 204, 1),
-                      rgbColor: Color.fromRGBO(249, 249, 249, 1),
-                    ),
-                  ],
-                ),
-                Padding(
-                  padding: EdgeInsets.only(top: 12),
-                  child: Text(_message, textAlign: TextAlign.center),
-                ),
-              ],
+    return AuthShell(
+      title: 'Criar conta',
+      subtitle: 'Leva menos de um minuto.',
+      children: [
+        AuthBanner(message: _message, isError: _messageIsError),
+        Row(
+          children: [
+            Expanded(
+              child: AppTextField(
+                controller: _nameController,
+                label: 'Nome',
+                textCapitalization: TextCapitalization.words,
+                textInputAction: TextInputAction.next,
+              ),
             ),
-          )),
+            const SizedBox(width: 12),
+            Expanded(
+              child: AppTextField(
+                controller: _surnameController,
+                label: 'Sobrenome',
+                textCapitalization: TextCapitalization.words,
+                textInputAction: TextInputAction.next,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        AppTextField(
+          controller: _emailController,
+          label: 'Email',
+          icon: Icons.mail_outline,
+          keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.next,
+        ),
+        const SizedBox(height: 14),
+        AppTextField(
+          controller: _passwordController,
+          label: 'Senha',
+          icon: Icons.lock_outline,
+          obscure: true,
+          textInputAction: TextInputAction.next,
+        ),
+        const SizedBox(height: 14),
+        AppTextField(
+          controller: _passwordConfirmController,
+          label: 'Confirmar senha',
+          icon: Icons.lock_outline,
+          obscure: true,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _register(),
+        ),
+        const SizedBox(height: 24),
+        AppButton(
+          label: 'Criar conta',
+          loading: _isLoading,
+          onPressed: _register,
+        ),
+        const SizedBox(height: 12),
+        AppButton(
+          label: 'Já tenho conta',
+          variant: AppButtonVariant.text,
+          onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+        ),
+      ],
     );
   }
 }

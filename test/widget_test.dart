@@ -21,8 +21,8 @@ void main() {
     testWidgets('mostra mensagem quando não há fotos selecionadas',
         (tester) async {
       await tester.pumpWidget(host(ShowChangesSlide(imageUrls: const [])));
-      expect(find.textContaining('Seleciona pelo menos uma foto'),
-          findsOneWidget);
+      expect(
+          find.textContaining('Selecione pelo menos uma foto'), findsOneWidget);
     });
 
     testWidgets('avança pelas fotos e volta ao início', (tester) async {
@@ -64,8 +64,8 @@ void main() {
     testWidgets('reconstruir com as mesmas fotos não volta à primeira',
         (tester) async {
       Widget build() => host(SingleChildScrollView(
-            child: ShowChangesSlide(
-                imageUrls: List.of(images), timerSeconds: 1),
+            child:
+                ShowChangesSlide(imageUrls: List.of(images), timerSeconds: 1),
           ));
       await tester.pumpWidget(build());
       await tester.pump(const Duration(seconds: 1));
@@ -73,6 +73,33 @@ void main() {
 
       await tester.pumpWidget(build());
       expect(find.text('2/3'), findsOneWidget);
+    });
+  });
+
+  group('BeforeAfterSlider', () {
+    testWidgets('mostra os dois rótulos com as datas', (tester) async {
+      await tester.pumpWidget(host(BeforeAfterSlider(
+        before: images.first,
+        after: images.last,
+        height: 300,
+      )));
+      expect(find.text('Antes · 01/01/2025'), findsOneWidget);
+      expect(find.text('Depois · 01/03/2025'), findsOneWidget);
+    });
+
+    testWidgets('arrastar move a linha de comparação', (tester) async {
+      await tester.pumpWidget(host(BeforeAfterSlider(
+        before: images.first,
+        after: images.last,
+        height: 300,
+      )));
+      final handle = find.byIcon(Icons.swap_horiz);
+      final start = tester.getCenter(handle).dx;
+
+      await tester.drag(handle, const Offset(150, 0));
+      await tester.pump();
+
+      expect(tester.getCenter(handle).dx, greaterThan(start + 100));
     });
   });
 
@@ -85,21 +112,41 @@ void main() {
             images: images,
             selectedIds: selected,
             onSelectionChanged: (ids) => setState(() => selected = ids),
+            onOpen: (_) {},
             onDelete: (_) {},
           ),
         ]),
       )));
 
-      expect(tester.widgetList<Checkbox>(find.byType(Checkbox)).length, 3);
-
-      // A grelha mostra a mais recente primeiro: o 1.º checkbox é o do 'c'.
-      await tester.tap(find.byType(Checkbox).first);
+      await tester.tap(find.byKey(const ValueKey('select-c')));
       await tester.pump();
       expect(selected, {'a', 'b'});
 
-      await tester.tap(find.byType(Checkbox).first);
+      await tester.tap(find.byKey(const ValueKey('select-c')));
       await tester.pump();
       expect(selected, {'a', 'b', 'c'});
+    });
+
+    testWidgets('o menu de uma foto pede para excluir essa foto',
+        (tester) async {
+      Map<String, dynamic>? deleted;
+      await tester.pumpWidget(host(CustomScrollView(slivers: [
+        ImageGallery(
+          images: images,
+          selectedIds: const {},
+          onSelectionChanged: (_) {},
+          onOpen: (_) {},
+          onDelete: (image) => deleted = image,
+        ),
+      ])));
+
+      await tester.tap(find.byTooltip('Opções da foto').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Excluir'));
+      await tester.pumpAndSettle();
+
+      // A grelha mostra a mais recente primeiro.
+      expect(deleted?['id'], 'c');
     });
   });
 }

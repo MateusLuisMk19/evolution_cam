@@ -30,7 +30,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  dropdown_button2: ^2.0.0
   supabase_flutter: ^2.8.0
   image_picker: ^0.8.7+5
   camera: ^0.10.5+9
@@ -38,6 +37,10 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  google_fonts: ^6.3.0
+  sensors_plus: ^5.0.1
+  image: ^4.12.0
+  shared_preferences: ^2.5.3
 
 dev_dependencies:
   flutter_test:

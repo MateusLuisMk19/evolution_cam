@@ -27,6 +27,18 @@
 EvolutionCam/ ├── lib/ │ ├── main.dart # Arquivo principal do Flutter │ ├── screens/ # Telas do aplicativo │ ├── models/ # Modelos de dados │ ├── services/ # Integração com o Supabase (auth e coleções) │ └── widgets/ # Componentes reutilizáveis ├── assets/ # Recursos estáticos (imagens, ícones) ├── pubspec.yaml # Arquivo de dependências do Flutter └── README.md # Informações do projeto
 
 
+## 🎨 Design
+
+- Material 3 gerado a partir do azul da marca (`#009EEB`), com o vermelho do logótipo como acento; tema claro e escuro em `lib/configs/theme.dart`.
+- Tipografia Plus Jakarta Sans (`google_fonts`, descarregada em tempo de execução; com `assets` locais funciona offline).
+- Componentes partilhados em `lib/components/` (`AppButton`, `AppTextField`, `EmptyState`, `confirmDialog`, `promptDialog`, `showAppSnack`). Os ecrãs usam sempre `colorScheme`, nunca cores fixas.
+- A página de cada coleção tem dois modos: **Evolução** (apresentação das fotos selecionadas) e **Comparar** (primeira vs. última foto, arrastando a linha).
+- Texto da interface em português do Brasil.
+
+## 🧪 Testes
+
+`flutter test` cobre o slideshow, o comparador antes/depois, a grelha de seleção e os diálogos.
+
 ## ⚙️ Configuração do Ambiente de Desenvolvimento
 1. Instale o Flutter e configure o ambiente seguindo a [documentação oficial](https://docs.flutter.dev/get-started/install).
 2. Configure o Supabase:

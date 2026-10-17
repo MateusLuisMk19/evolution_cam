@@ -46,9 +46,36 @@ class AuthService {
   }
 }
 
+/// Texto de erro pronto para mostrar ao utilizador (em português).
 String errorMessage(Object e) {
-  if (e is AuthException) return e.message;
-  if (e is PostgrestException) return e.message;
-  if (e is StorageException) return e.message;
-  return e.toString();
+  final raw = switch (e) {
+    AuthException() => e.message,
+    PostgrestException() => e.message,
+    StorageException() => e.message,
+    _ => e.toString(),
+  };
+  final lower = raw.toLowerCase();
+  if (lower.contains('invalid login credentials')) {
+    return 'Email ou senha incorretos';
+  }
+  if (lower.contains('user already registered') ||
+      lower.contains('already been registered')) {
+    return 'Já existe uma conta com este email';
+  }
+  if (lower.contains('email not confirmed')) {
+    return 'Confirme o seu email antes de entrar';
+  }
+  if (lower.contains('rate limit') || lower.contains('too many')) {
+    return 'Muitas tentativas. Aguarde um pouco e tente de novo';
+  }
+  if (lower.contains('socketexception') ||
+      lower.contains('failed host lookup') ||
+      lower.contains('clientexception') ||
+      lower.contains('network')) {
+    return 'Sem conexão com a internet';
+  }
+  if (lower.contains('password should be at least')) {
+    return 'A senha deve ter pelo menos 6 caracteres';
+  }
+  return raw;
 }

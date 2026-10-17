@@ -1,7 +1,7 @@
-import 'package:evolution_cam/components/components.dart';
+import 'package:evolution_cam/components/app_widgets.dart';
+import 'package:evolution_cam/components/feedback.dart';
 import 'package:evolution_cam/components/my_drawer.dart';
-import 'package:evolution_cam/components/textlabels.dart';
-import 'package:evolution_cam/functions/modal.dart';
+import 'package:evolution_cam/configs/theme.dart';
 import 'package:evolution_cam/services/auth_service.dart';
 import 'package:evolution_cam/services/collection_service.dart';
 import 'package:flutter/material.dart';
@@ -10,22 +10,16 @@ class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
 
   @override
-  _ProfileScreenState createState() => _ProfileScreenState();
+  State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final _service = CollectionService.instance;
-  final _nameController = TextEditingController();
-  final _newCategoryController = TextEditingController();
 
-  bool _isEditingName = false;
-  bool _isEditingNewCategory = false;
   bool _isLoading = true;
-
-  int _collectionsCount = 0;
+  int _collections = 0;
+  int _photos = 0;
   List<String> _categories = [];
-  final List<TextEditingController> _categoryControllers = [];
-  final List<bool> _isEditingCategory = [];
 
   @override
   void initState() {
@@ -33,62 +27,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _load();
   }
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _newCategoryController.dispose();
-    for (final c in _categoryControllers) {
-      c.dispose();
-    }
-    super.dispose();
-  }
-
   Future<void> _load() async {
     try {
       final results = await Future.wait([
         _service.count(),
+        _service.countImages(),
         _service.categories(),
       ]);
       if (!mounted) return;
       setState(() {
-        _collectionsCount = results[0] as int;
-        _setCategories(results[1] as List<String>);
+        _collections = results[0] as int;
+        _photos = results[1] as int;
+        _categories = results[2] as List<String>;
         _isLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao carregar perfil: ${errorMessage(e)}')),
-      );
+      setState(() => _isLoading = false);
+      showAppSnack(context, 'Erro ao carregar perfil: ${errorMessage(e)}',
+          error: true);
     }
   }
 
-  // Recria os controladores para acompanharem a lista de categorias.
-  void _setCategories(List<String> categories) {
-    for (final c in _categoryControllers) {
-      c.dispose();
-    }
-    _categories = categories;
-    _categoryControllers
-      ..clear()
-      ..addAll(categories.map((c) => TextEditingController(text: c)));
-    _isEditingCategory
-      ..clear()
-      ..addAll(List.filled(categories.length, false));
-  }
-
-  _currentUser(option) {
-    if (option == 'email') {
-      return AuthService.instance.email;
-    } else if (option == 'name') {
-      return AuthService.instance.displayName.isEmpty
-          ? 'Nome não definido'
-          : AuthService.instance.displayName;
-    } else {
-      return AuthService.instance.currentUser;
+  Future<void> _editName() async {
+    final name = await promptDialog(
+      context,
+      title: 'Alterar nome',
+      label: 'Nome',
+      initial: AuthService.instance.displayName,
+      icon: Icons.person_outline,
+    );
+    if (name == null || !mounted) return;
+    try {
+      await AuthService.instance.updateDisplayName(name);
+      if (!mounted) return;
+      setState(() {});
+      showAppSnack(context, 'Nome atualizado');
+    } catch (e) {
+      if (!mounted) return;
+      showAppSnack(context, 'Erro ao salvar o nome: ${errorMessage(e)}',
+          error: true);
     }
   }
 
@@ -96,325 +74,243 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       await _service.saveCategories(updated);
       if (!mounted) return;
-      setState(() {
-        _setCategories(updated);
-      });
+      setState(() => _categories = updated);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('Erro ao guardar categorias: ${errorMessage(e)}')),
-      );
+      showAppSnack(context, 'Erro ao salvar as categorias: ${errorMessage(e)}',
+          error: true);
     }
   }
 
-  Future<void> _deleteCategory(int idx) =>
-      _saveCategories([..._categories]..removeAt(idx));
-
-  Future<void> _addCategory(int? idx) {
-    final updated = [..._categories];
-    if (idx == null) {
-      updated.add(_newCategoryController.text);
-      _newCategoryController.clear();
-    } else {
-      updated[idx] = _categoryControllers[idx].text;
+  bool _exists(String name, {int? except}) {
+    for (var i = 0; i < _categories.length; i++) {
+      if (i != except && _categories[i].toLowerCase() == name.toLowerCase()) {
+        return true;
+      }
     }
-    return _saveCategories(updated);
+    return false;
+  }
+
+  Future<void> _addCategory() async {
+    final name = await promptDialog(
+      context,
+      title: 'Nova categoria',
+      label: 'Nome da categoria',
+      confirmLabel: 'Adicionar',
+      icon: Icons.label_outline,
+    );
+    if (name == null || !mounted) return;
+    if (_exists(name)) {
+      showAppSnack(context, 'Essa categoria já existe', error: true);
+      return;
+    }
+    await _saveCategories([..._categories, name]);
+  }
+
+  Future<void> _renameCategory(int index) async {
+    final name = await promptDialog(
+      context,
+      title: 'Renomear categoria',
+      label: 'Nome da categoria',
+      initial: _categories[index],
+      icon: Icons.label_outline,
+    );
+    if (name == null || !mounted) return;
+    if (_exists(name, except: index)) {
+      showAppSnack(context, 'Essa categoria já existe', error: true);
+      return;
+    }
+    await _saveCategories([..._categories]..[index] = name);
+  }
+
+  Future<void> _deleteCategory(int index) async {
+    final ok = await confirmDialog(
+      context,
+      title: 'Excluir categoria?',
+      message:
+          '"${_categories[index]}" deixa de aparecer na lista. As coleções que já a usam não são afetadas.',
+      confirmLabel: 'Excluir',
+      destructive: true,
+    );
+    if (!ok || !mounted) return;
+    await _saveCategories([..._categories]..removeAt(index));
   }
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final auth = AuthService.instance;
+    final name = auth.displayName;
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Meu Perfil'),
-        backgroundColor: Theme.of(context).primaryColor,
-      ),
-      drawer: MyDrawer(
-        page: 'profile',
-      ),
-      body: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                MyText(
-                  value: 'Nome: ',
-                  size: 'md',
-                  fontWeight: FontWeight.bold,
-                ),
-                MyText(
-                  value: _currentUser('name').toString(),
-                  size: 'md',
-                  fontWeight: FontWeight.normal,
-                ),
-                Padding(
-                    padding: EdgeInsets.only(left: 5),
-                    child: SizedBox(
-                      width: 30,
-                      height: 30,
-                      child: IconButton.filledTonal(
-                        icon: Icon(
-                          Icons.edit,
-                          size: 15,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _isEditingName = true;
-                          });
-                        },
-                      ),
-                    )),
-              ],
-            ),
-            SizedBox(height: 10),
-            CustomTextField(
-              fieldController: _nameController,
-              marginBottom: 10,
-              placeholder: 'Insira o nome',
-              radius: 5,
-              context: context,
-              inviseble: !_isEditingName,
-            ),
-            VisibilityBox(
-              marginTop: 10,
-              marginBottom: 10,
-              inviseble: !_isEditingName,
-              child: ButtonGroupYN(
-                context: context,
-                label1: 'Cancelar',
-                label2: 'Salvar',
-                onButton1: () {
-                  setState(() {
-                    _nameController.clear();
-                    _isEditingName = false;
-                  });
-                },
-                onButton2: () async {
-                  if (_nameController.text.isEmpty) {
-                    return;
-                  }
-
-                  try {
-                    await AuthService.instance
-                        .updateDisplayName(_nameController.text);
-                  } catch (e) {
-                    if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content:
-                              Text('Erro ao guardar nome: ${errorMessage(e)}')),
-                    );
-                    return;
-                  }
-
-                  setState(() {
-                    _nameController.clear();
-                    _isEditingName = false;
-                  });
-
-                  // Atualiza o estado da página para refletir o novo nome
-                  setState(() {});
-                },
-              ),
-            ),
-            Row(
-              children: [
-                MyText(
-                  value: 'Email: ',
-                  size: 'md',
-                  fontWeight: FontWeight.bold,
-                ),
-                MyText(
-                  value: _currentUser('email').toString(),
-                  size: 'md',
-                  fontWeight: FontWeight.normal,
-                ),
-              ],
-            ),
-            SizedBox(height: 10),
-            Row(
-              children: [
-                MyText(
-                  value: 'Coleções: ',
-                  size: 'md',
-                  fontWeight: FontWeight.bold,
-                ),
-                MyText(
-                  value: _collectionsCount.toString(),
-                  size: 'md',
-                )
-              ],
-            ),
-            SizedBox(height: 10),
-            Builder(
-              builder: (context) {
-                if (_isLoading) {
-                  return Center(child: CircularProgressIndicator());
-                }
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        MyText(
-                          value: 'Categorias',
-                          size: 'md',
-                          fontWeight: FontWeight.bold,
-                        ),
-                        SizedBox(width: 10),
-                        IconButton.filled(
-                          style: ButtonStyle(
-                            backgroundColor: MaterialStateProperty.all(
-                              Theme.of(context).primaryColor,
-                            ),
-                          ),
-                          icon: Icon(
-                            Icons.add,
-                            size: 20,
-                          ),
-                          onPressed: () {
-                            if (_isEditingNewCategory) {
-                              return;
-                            }
-                            setState(() {
-                              _isEditingNewCategory = true;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                    VisibilityBox(
-                        inviseble: !_isEditingNewCategory,
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 60),
-                          child: Column(children: [
-                            CustomTextField(
-                                fieldController: _newCategoryController,
-                                placeholder: 'Nova categoria',
-                                radius: 5,
-                                context: context,
-                                marginTop: 10),
-                            VisibilityBox(
-                              marginTop: 10,
-                              marginBottom: 10,
-                              child: ButtonGroupYN(
-                                context: context,
-                                label1: 'Cancelar',
-                                label2: 'Salvar',
-                                onButton1: () {
-                                  setState(() {
-                                    _isEditingNewCategory = false;
-                                    _newCategoryController.clear();
-                                  });
-                                },
-                                onButton2: () {
-                                  setState(() {
-                                    _addCategory(null);
-                                    _isEditingNewCategory = false;
-                                  });
-                                },
-                              ),
-                            )
-                          ]),
-                        )),
-                    SizedBox(
-                      width: MediaQuery.of(context).size.width / 1.5,
-                      height: MediaQuery.of(context).size.height / 2,
-                      child: ListView(
-                        shrinkWrap:
-                            true, // Evita que o ListView ocupe todo o espaço disponível
-                        children: _categories
-                            .asMap() // Converte a lista em um mapa para acessar índices
-                            .entries
-                            .map<Widget>((entry) {
-                          final idx = entry.key; // Índice do item
-                          final item = entry.value; // Valor do item
-
-                          return SizedBox(
+      drawer: const MyDrawer(page: 'profile'),
+      appBar: AppBar(title: const Text('Perfil')),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+                children: [
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Row(
+                        children: [
+                          UserAvatar(name: name, email: auth.email, radius: 36),
+                          const SizedBox(width: 16),
+                          Expanded(
                             child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                VisibilityBox(
-                                  inviseble: _isEditingCategory[idx],
-                                  child: Card(
-                                    child: Padding(
-                                      padding: EdgeInsets.symmetric(
-                                          vertical: 5, horizontal: 15),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          MyText(
-                                            value: item.toString(),
-                                            size: 'sm',
-                                          ),
-                                          ActionsGroup(
-                                            inviseble: _isEditingCategory[idx],
-                                            fistBtnPressed: () {
-                                              setState(() {
-                                                _isEditingCategory[idx] = true;
-                                              });
-                                            },
-                                            secondBtnPressed: () {
-                                              modalConfirm(
-                                                context: context,
-                                                content:
-                                                    'Tem certeza que deseja deletar esta categoria?',
-                                                actions: () =>
-                                                    _deleteCategory(idx),
-                                              );
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
+                                Text(
+                                  name.isEmpty ? 'Nome não definido' : name,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: text.titleLarge
+                                      ?.copyWith(fontWeight: FontWeight.w800),
                                 ),
-                                CustomTextField(
-                                    fieldController: _categoryControllers[idx],
-                                    placeholder: 'Editar categoria',
-                                    radius: 5,
-                                    context: context,
-                                    inviseble: !_isEditingCategory[idx],
-                                    marginTop: 10),
-                                VisibilityBox(
-                                  marginTop: 10,
-                                  marginBottom: 10,
-                                  inviseble: !_isEditingCategory[idx],
-                                  child: ButtonGroupYN(
-                                    context: context,
-                                    label1: 'Cancelar',
-                                    label2: 'Salvar',
-                                    onButton1: () {
-                                      setState(() {
-                                        _isEditingCategory[idx] = false;
-                                        _categoryControllers[idx].text =
-                                            _categories[idx];
-                                      });
-                                    },
-                                    onButton2: () {
-                                      // Salvar alterações
-                                      setState(() {
-                                        _addCategory(idx);
-                                        _isEditingCategory[idx] = false;
-                                      });
-                                    },
-                                  ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  auth.email ?? '',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: text.bodyMedium?.copyWith(
+                                      color: scheme.onSurfaceVariant),
                                 ),
                               ],
                             ),
-                          );
-                        }).toList(),
+                          ),
+                          IconButton(
+                            tooltip: 'Alterar nome',
+                            icon: const Icon(Icons.edit_outlined),
+                            onPressed: _editName,
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                );
-              },
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _Stat(
+                            icon: Icons.photo_library_outlined,
+                            value: '$_collections',
+                            label: 'Coleções'),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _Stat(
+                            icon: Icons.photo_camera_outlined,
+                            value: '$_photos',
+                            label: 'Fotos'),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _Stat(
+                            icon: Icons.label_outline,
+                            value: '${_categories.length}',
+                            label: 'Categorias'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 28),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text('Categorias',
+                            style: text.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w800)),
+                      ),
+                      TextButton.icon(
+                        onPressed: _addCategory,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Adicionar'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  if (_categories.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Text(
+                        'Ainda não tem categorias. Adicione uma para organizar as suas coleções.',
+                        textAlign: TextAlign.center,
+                        style: text.bodyMedium
+                            ?.copyWith(color: scheme.onSurfaceVariant),
+                      ),
+                    )
+                  else
+                    for (var i = 0; i < _categories.length; i++)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Card(
+                          child: ListTile(
+                            contentPadding:
+                                const EdgeInsets.only(left: 16, right: 4),
+                            leading: Icon(Icons.label_outline,
+                                color: scheme.primary),
+                            title: Text(_categories[i],
+                                style: text.bodyLarge
+                                    ?.copyWith(fontWeight: FontWeight.w600)),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  tooltip: 'Renomear',
+                                  icon: const Icon(Icons.edit_outlined),
+                                  onPressed: () => _renameCategory(i),
+                                ),
+                                IconButton(
+                                  tooltip: 'Excluir',
+                                  icon: Icon(Icons.delete_outline,
+                                      color: scheme.error),
+                                  onPressed: () => _deleteCategory(i),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                ],
+              ),
             ),
-          ],
-        ),
+    );
+  }
+}
+
+class _Stat extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final String label;
+
+  const _Stat({required this.icon, required this.value, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: BoxDecoration(
+        color: scheme.primaryContainer.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: scheme.onPrimaryContainer),
+          const SizedBox(height: 8),
+          Text(value,
+              style: text.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: scheme.onPrimaryContainer)),
+          Text(label,
+              style:
+                  text.labelMedium?.copyWith(color: scheme.onPrimaryContainer)),
+        ],
       ),
     );
   }
