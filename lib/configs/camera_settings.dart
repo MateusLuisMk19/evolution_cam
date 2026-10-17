@@ -1,9 +1,11 @@
 import 'dart:convert';
 
-import 'package:evolution_cam/components/camera_components.dart';
 import 'package:evolution_cam/services/auth_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// Como a foto anterior aparece por cima do preview.
+enum RefMode { edges, ghost, split }
 
 /// Preferências da câmera, guardadas por utilizador neste aparelho.
 class CameraSettings extends ChangeNotifier {

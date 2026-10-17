@@ -46,9 +46,6 @@ class CamButton extends StatelessWidget {
   }
 }
 
-/// Como a foto anterior aparece por cima do preview.
-enum RefMode { edges, ghost, split }
-
 /// Abre as definições da câmera. `settings` é atualizado em direto.
 Future<void> showCameraSettings(
   BuildContext context,
